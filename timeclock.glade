@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
+<!--Generated with glade3 3.4.5 on Wed Jun 10 15:03:52 2009 -->
+<glade-interface>
+  <widget class="GtkWindow" id="mainWin">
+    <property name="visible">True</property>
+    <property name="title" translatable="yes">Time Clock</property>
+    <property name="resizable">False</property>
+    <property name="window_position">GTK_WIN_POS_CENTER</property>
+    <signal name="destroy" handler="on_mainWin_destroy"/>
+    <child>
+      <widget class="GtkTable" id="table1">
+        <property name="visible">True</property>
+        <property name="border_width">5</property>
+        <property name="n_rows">4</property>
+        <property name="n_columns">3</property>
+        <property name="column_spacing">5</property>
+        <property name="row_spacing">5</property>
+        <child>
+          <widget class="GtkRadioButton" id="btn_workMode">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="label" translatable="yes">_Work</property>
+            <property name="use_underline">True</property>
+            <property name="response_id">0</property>
+            <property name="group">btn_sleepMode</property>
+            <signal name="toggled" handler="on_mode_toggled"/>
+          </widget>
+          <packing>
+            <property name="left_attach">1</property>
+            <property name="right_attach">2</property>
+            <property name="top_attach">1</property>
+            <property name="bottom_attach">2</property>
+            <property name="y_options">GTK_EXPAND</property>
+          </packing>
+        </child>
+        <child>
+          <widget class="GtkRadioButton" id="btn_playMode">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="label" translatable="yes">_Leisure</property>
+            <property name="use_underline">True</property>
+            <property name="response_id">0</property>
+            <property name="active">True</property>
+            <property name="group">btn_sleepMode</property>
+            <signal name="toggled" handler="on_mode_toggled"/>
+          </widget>
+          <packing>
+            <property name="left_attach">2</property>
+            <property name="right_attach">3</property>
+            <property name="top_attach">1</property>
+            <property name="bottom_attach">2</property>
+            <property name="y_options">GTK_EXPAND</property>
+          </packing>
+        </child>
+        <child>
+          <widget class="GtkRadioButton" id="btn_overheadMode">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="label" translatable="yes">_Daily Routine</property>
+            <property name="use_underline">True</property>
+            <property name="response_id">0</property>
+            <property name="active">True</property>
+            <property name="group">btn_sleepMode</property>
+            <signal name="toggled" handler="on_mode_toggled"/>
+          </widget>
+          <packing>
+            <property name="top_attach">1</property>
+            <property name="bottom_attach">2</property>
+            <property name="y_options">GTK_EXPAND</property>
+          </packing>
+        </child>
+        <child>
+          <widget class="GtkRadioButton" id="btn_sleepMode">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="tooltip" translatable="yes">Pause all timers</property>
+            <property name="label" translatable="yes">_Snooze</property>
+            <property name="use_underline">True</property>
+            <property name="response_id">0</property>
+            <property name="active">True</property>
+            <signal name="toggled" handler="on_mode_toggled"/>
+          </widget>
+          <packing>
+            <property name="right_attach">2</property>
+            <property name="top_attach">3</property>
+            <property name="bottom_attach">4</property>
+            <property name="y_options">GTK_EXPAND</property>
+          </packing>
+        </child>
+        <child>
+          <widget class="GtkProgressBar" id="progress_workMode">
+            <property name="visible">True</property>
+            <property name="orientation">GTK_PROGRESS_RIGHT_TO_LEFT</property>
+          </widget>
+          <packing>
+            <property name="left_attach">1</property>
+            <property name="right_attach">2</property>
+            <property name="y_options">GTK_EXPAND</property>
+          </packing>
+        </child>
+        <child>
+          <widget class="GtkProgressBar" id="progress_playMode">
+            <property name="visible">True</property>
+            <property name="orientation">GTK_PROGRESS_RIGHT_TO_LEFT</property>
+          </widget>
+          <packing>
+            <property name="left_attach">2</property>
+            <property name="right_attach">3</property>
+            <property name="y_options">GTK_EXPAND</property>
+          </packing>
+        </child>
+        <child>
+          <widget class="GtkProgressBar" id="progress_overheadMode">
+            <property name="visible">True</property>
+            <property name="orientation">GTK_PROGRESS_RIGHT_TO_LEFT</property>
+          </widget>
+          <packing>
+            <property name="y_options">GTK_EXPAND</property>
+          </packing>
+        </child>
+        <child>
+          <widget class="GtkHSeparator" id="hseparator1">
+            <property name="visible">True</property>
+          </widget>
+          <packing>
+            <property name="right_attach">3</property>
+            <property name="top_attach">2</property>
+            <property name="bottom_attach">3</property>
+            <property name="y_padding">5</property>
+          </packing>
+        </child>
+        <child>
+          <widget class="GtkHBox" id="hbox1">
+            <property name="visible">True</property>
+            <child>
+              <widget class="GtkButton" id="button1">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="tooltip" translatable="yes">Preferences</property>
+                <property name="response_id">0</property>
+                <child>
+                  <widget class="GtkImage" id="image1">
+                    <property name="visible">True</property>
+                    <property name="stock">gtk-preferences</property>
+                  </widget>
+                </child>
+              </widget>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="padding">5</property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkButton" id="btn_reset">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="tooltip" translatable="yes">Reset all timers</property>
+                <property name="label" translatable="yes">_Reset</property>
+                <property name="use_underline">True</property>
+                <property name="response_id">0</property>
+                <signal name="clicked" handler="on_reset_clicked"/>
+              </widget>
+              <packing>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </widget>
+          <packing>
+            <property name="left_attach">2</property>
+            <property name="right_attach">3</property>
+            <property name="top_attach">3</property>
+            <property name="bottom_attach">4</property>
+            <property name="y_options">GTK_EXPAND</property>
+          </packing>
+        </child>
+      </widget>
+    </child>
+  </widget>
+</glade-interface>

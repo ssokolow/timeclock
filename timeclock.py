@@ -4,6 +4,7 @@
 A simple application to help lazy procrastinators (me) to manage their time.
 
 @todo: Planned improvements:
+ - Clicking the preferences button while the dialog is shown should do nothing.
  - Rework the design to minimize dependence on GTK+ (in case I switch to Qt for
    Phonon)
  - Make the preferences dialog functional and hook up the button for it.
@@ -111,6 +112,8 @@ class TimeClock:
         dic = { "on_mode_toggled"    : self.playmode_changed,
                 "on_reset_clicked"   : self.reset_clicked,
                 "on_prefs_clicked"   : self.prefs_clicked,
+                "on_prefs_commit"    : self.prefs_commit,
+                "on_prefs_cancel"    : self.prefs_cancel,
                 "on_mainWin_destroy" : gtk.main_quit }
         self.wTree.signal_autoconnect(dic)
         gobject.timeout_add(1000, self.tick)
@@ -160,7 +163,23 @@ class TimeClock:
 
     def prefs_clicked(self, widget):
         """Callback for the preferences button"""
-        logging.error("TODO: Implement this")
+        for widget_name in self.total:
+            widget_spin =  'spinBtn_%s' % widget_name.lstrip('btn_')
+            widget = self.wTree.get_widget(widget_spin)
+            widget.set_value(self.total[widget_name] / 3600.0)
+        self.wTree.get_widget('prefsDlg').show()
+
+    def prefs_cancel(self, widget):
+        """Callback for cancelling changes the preferences"""
+        self.wTree.get_widget('prefsDlg').hide()
+
+    def prefs_commit(self, widget):
+        """Callback for OKing changes to the preferences"""
+        for widget_name in self.total:
+            widget_newname =  'spinBtn_%s' % widget_name.lstrip('btn_')
+            widget = self.wTree.get_widget(widget_newname)
+            self.total[widget_name] = (widget.get_value() * 3600)
+        self.wTree.get_widget('prefsDlg').hide()
 
     def tick(self):
         """Once-per-second timeout callback for updating progress bars."""

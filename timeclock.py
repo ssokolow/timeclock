@@ -155,7 +155,7 @@ class TimeClock:
 
     def reset_clicked(self, widget):
         """Callback for the reset button"""
-        self.used = dict((x.get_name(), 0) for x in self.used)
+        self.used = dict((x, 0) for x in self.used)
         self.update_progressBars()
 
     def prefs_clicked(self, widget):

@@ -24,6 +24,8 @@ A simple application to help lazy procrastinators (me) to manage their time.
 @todo: Consider:
  - Changing this into a Plasma widget
  - Using PyKDE's bindings to the KDE Notification system
+
+@newfield appname: Application Name
 """
 
 __appname__ = "The Procrastinator's Timeclock"
@@ -69,8 +71,9 @@ except ImportError:
 
 try:
     import pynotify
-    pynotify.init(__appname___)
+    pynotify.init(__appname__)
     def notify_exhaustion(timer_name):
+        """Display a libnotify notification that the given timer has expired."""
         notification = pynotify.Notification(
             "%s Time Exhausted" % timer_name.title(),
             "You have used up your alotted time for %s" % timer_name.lower(),
@@ -78,10 +81,10 @@ try:
         notification.set_urgency(pynotify.URGENCY_NORMAL)
         notification.set_timeout(pynotify.EXPIRES_NEVER)
         notification.show()
-except:
+except ImportError:
     notify_exhaustion = None
 
-CURRENT_SAVE_VERSION = 2
+CURRENT_SAVE_VERSION = 2 #: Used for save file versioning
 class TimeClock:
     def __init__(self):
         #Set the Glade file

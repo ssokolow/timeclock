@@ -178,10 +178,10 @@ class TimeClock:
 
     def prefs_clicked(self, widget):
         """Callback for the preferences button"""
-        for widget_name in self.total:
-            widget_spin =  'spinBtn_%s' % widget_name.lstrip('btn_')
+        for mode in self.total:
+            widget_spin =  'spinBtn_%sMode' % MODE_NAMES[mode]
             widget = self.wTree.get_widget(widget_spin)
-            widget.set_value(self.total[widget_name] / 3600.0)
+            widget.set_value(self.total[mode] / 3600.0)
         self.wTree.get_widget('prefsDlg').show()
 
     def prefs_cancel(self, widget):
@@ -190,10 +190,11 @@ class TimeClock:
 
     def prefs_commit(self, widget):
         """Callback for OKing changes to the preferences"""
-        for widget_name in self.total:
-            widget_newname =  'spinBtn_%s' % widget_name.lstrip('btn_')
-            widget = self.wTree.get_widget(widget_newname)
-            self.total[widget_name] = (widget.get_value() * 3600)
+        for mode in self.total:
+            widget_spin =  'spinBtn_%sMode' % MODE_NAMES[mode]
+            widget = self.wTree.get_widget(widget_spin)
+            self.total[mode] = (widget.get_value() * 3600)
+        self.update_progressBars()
         self.wTree.get_widget('prefsDlg').hide()
 
     def tick(self):

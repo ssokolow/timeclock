@@ -4,7 +4,6 @@
 A simple application to help lazy procrastinators (me) to manage their time.
 
 @todo: Planned improvements:
- - Remember timer values between runs
  - Rework the design to minimize dependence on GTK+ (in case I switch to Qt for
    Phonon)
  - Make the preferences dialog functional and hook up the button for it.
@@ -101,9 +100,7 @@ class TimeClock:
                 # Sanity checking could go here.
 
             except Exception:
-                # Load failed, ignore the save file.
-                # TODO: Error message.
-                pass
+                logging.error("Unable to load save file. Ignoring: %s", SAVE_FILE)
             else:
                 # File loaded successfully, now we put the data in place.
                 self.total = total

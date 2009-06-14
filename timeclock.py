@@ -4,7 +4,6 @@
 A simple application to help lazy procrastinators (me) to manage their time.
 
 @todo: Planned improvements:
- - Replace "remaining" with "used" to simplify runtime adjustments to "total".
  - Remember timer values between runs
  - Rework the design to minimize dependence on GTK+ (in case I switch to Qt for
    Phonon)
@@ -30,7 +29,7 @@ A simple application to help lazy procrastinators (me) to manage their time.
 
 __appname__ = "The Procrastinator's Timeclock"
 __author__  = "Stephan Sokolow (deitarion/SSokolow)"
-__version__ = "0.1"
+__version__ = "0.2"
 __license__ = "GNU GPL 2.0 or later"
 
 default_modes = {
@@ -92,12 +91,12 @@ class TimeClock:
         """All non-signal, non-glade widget initialization."""
         # Set up the data structures
         self.timer_widgets = {}
-        self.total, self.remaining = {}, {}
+        self.total, self.used = {}, {}
         for mode in default_modes:
             widget = self.wTree.get_widget('btn_%s' % mode)
             self.timer_widgets[widget] = self.wTree.get_widget('progress_%s' % mode)
             self.total[widget] = default_modes[mode]
-            self.remaining[widget] = default_modes[mode]
+            self.used[widget] = 0
         self.selectedBtn = self.wTree.get_widget('btn_sleepMode')
 
         # Because PyGTK isn't reliably obeying Glade
@@ -109,13 +108,14 @@ class TimeClock:
     def update_progressBars(self):
         """Common code used for initializing and updating the progress bars."""
         for widget in self.timer_widgets:
-            pbar, val = self.timer_widgets[widget], self.remaining[widget]
+            pbar, total, val = self.timer_widgets[widget], self.total[widget], self.used[widget]
+            remaining = round(total - val)
             if pbar:
-                if val >= 0:
-                    pbar.set_text(time.strftime('%H:%M:%S', time.gmtime(val)))
+                if remaining >= 0:
+                    pbar.set_text(time.strftime('%H:%M:%S', time.gmtime(remaining)))
                 else:
-                    pbar.set_text(time.strftime('-%H:%M:%S', time.gmtime(abs(val))))
-                pbar.set_fraction(max(float(val) / self.total[widget], 0))
+                    pbar.set_text(time.strftime('-%H:%M:%S', time.gmtime(abs(remaining))))
+                pbar.set_fraction(max(float(remaining) / self.total[widget], 0))
 
     def playmode_changed(self, widget):
         """Callback for clicking the timer-selection radio buttons"""
@@ -124,7 +124,7 @@ class TimeClock:
 
     def reset_clicked(self, widget):
         """Callback for the reset button"""
-        self.remaining = self.total.copy()
+        self.used = dict((x, 0) for x in self.used)
         self.update_progressBars()
 
     def prefs_clicked(self, widget):
@@ -134,9 +134,9 @@ class TimeClock:
     def tick(self):
         """Once-per-second timeout callback for updating progress bars."""
         if self.selectedBtn.get_name() != 'btn_sleepMode':
-            self.remaining[self.selectedBtn] -= (time.time() - self.last_tick)
-            self.last_tick = time.time()
+            self.used[self.selectedBtn] += (time.time() - self.last_tick)
             self.update_progressBars()
+        self.last_tick = time.time()
         return True
 
     def onExit(self):

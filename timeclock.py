@@ -7,7 +7,6 @@ A simple application to help lazy procrastinators (me) to manage their time.
  - Clicking the preferences button while the dialog is shown should do nothing.
  - Rework the design to minimize dependence on GTK+ (in case I switch to Qt for
    Phonon)
- - Make the preferences dialog functional and hook up the button for it.
  - Have the system complain if overhead + work + play + sleep (8 hours) > 24
    and enforce minimums of 1 hour for leisure and overhead.
  - Report PyGTK's uncatchable xkill response on the bug tracker.
@@ -28,7 +27,7 @@ A simple application to help lazy procrastinators (me) to manage their time.
 """
 
 __appname__ = "The Procrastinator's Timeclock"
-__author__  = "Stephan Sokolow (deitarion/SSokolow)"
+__authors__  = ["Stephan Sokolow (deitarion/SSokolow)", "Charlie Nolan (FunnyMan3595)"]
 __version__ = "0.2"
 __license__ = "GNU GPL 2.0 or later"
 

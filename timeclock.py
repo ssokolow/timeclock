@@ -4,16 +4,28 @@
 A simple application to help lazy procrastinators (me) to manage their time.
 
 @todo: Planned improvements:
+ - Replace "remaining" with "used" to simplify runtime adjustments to "total".
  - Remember timer values between runs
- - Finish building the preferences dialog, make it functional, and hook it up.
- - Add optional sound effects for timer completion
+ - Rework the design to minimize dependence on GTK+ (in case I switch to Qt for
+   Phonon)
+ - Make the preferences dialog functional and hook up the button for it.
  - Have the system complain if overhead + work + play + sleep (8 hours) > 24
    and enforce minimums of 1 hour for leisure and overhead.
+ - Report PyGTK's uncatchable xkill response on the bug tracker.
+
+@todo: Notification TODO:
+ - Set up a callback for timer exhaustion.
+ - Build the preferences page.
+ - Hook up notify_exhaustion with all appropriate conditionals.
+ - Offer to turn the timer text a user-specified color (default: red) when it
+   goes into negative values.
+ - Add optional sound effects for timer completion using gst-python or PyGame:
+   - http://mail.python.org/pipermail/python-list/2006-October/582445.html
+   - http://www.jonobacon.org/2006/08/28/getting-started-with-gstreamer-with-python/
 
 @todo: Consider:
  - Changing this into a Plasma widget
  - Using PyKDE's bindings to the KDE Notification system
- - Report PyGTK's uncatchable xkill response on the bug tracker.
 """
 
 __appname__ = "The Procrastinator's Timeclock"
@@ -28,7 +40,10 @@ default_modes = {
 }
 
 import logging, os, signal, sys, time
+
+DATA_DIR = os.environ.get('XDG_DATA_HOME', os.path.expanduser('~/.local/share'))
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+
 try:
     import pygtk
     pygtk.require("2.0")
@@ -38,10 +53,22 @@ except:
 try:
     import gtk, gobject
     import gtk.glade
-except:
+except ImportError:
     sys.exit(1)
 
-DATA_DIR = os.environ.get('XDG_DATA_HOME', os.path.expanduser('~/.local/share'))
+try:
+    import pynotify
+    pynotify.init(__appname___)
+    def notify_exhaustion(timer_name):
+        notification = pynotify.Notification(
+            "%s Time Exhausted" % timer_name.title(),
+            "You have used up your alotted time for %s" % timer_name.lower(),
+            "dialog-warning")
+        notification.set_urgency(pynotify.URGENCY_NORMAL)
+        notification.set_timeout(pynotify.EXPIRES_NEVER)
+        notification.show()
+except:
+    notify_exhaustion = None
 
 class TimeClock:
     def __init__(self):

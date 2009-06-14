@@ -108,11 +108,13 @@ class TimeClock:
                                   for key, value in total_old.items() )
                     used = dict( (translate.index(key), value)
                                  for key, value in used_old.items() )
+                else:
+                    raise ValueError("Save file too new!")
 
                 # Sanity checking could go here.
 
-            except Exception:
-                logging.error("Unable to load save file. Ignoring: %s", SAVE_FILE)
+            except Exception, e:
+                logging.error("Unable to load save file. Ignoring: %s", e)
             else:
                 # File loaded successfully, now we put the data in place.
                 self.total = total

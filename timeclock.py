@@ -91,15 +91,23 @@ class TimeClock:
         # Load the save file, if it exists.
         if file_exists(SAVE_FILE):
             try:
+                # Load the data, but leave the internal state unchanged in case
+                # of corruption.
                 loaded = pickle.load(open(SAVE_FILE))
                 version = loaded[0]
                 if version == CURRENT_SAVE_VERSION:
-                    version, self.total, self.used = loaded
+                    version, total, used = loaded
+
+                # Sanity checking could go here.
+
             except Exception:
                 # Load failed, ignore the save file.
                 # TODO: Error message.
                 pass
             else:
+                # File loaded successfully, now we put the data in place.
+                self.total = total
+                self.used = used
                 self.update_progressBars()
 
         # Connect signals

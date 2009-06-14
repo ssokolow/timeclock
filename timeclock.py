@@ -32,10 +32,14 @@ __author__  = "Stephan Sokolow (deitarion/SSokolow)"
 __version__ = "0.2"
 __license__ = "GNU GPL 2.0 or later"
 
+# Mode constants.
+SLEEP, OVERHEAD, WORK, PLAY = range(4)
+MODE_NAMES = ("sleep", "overhead", "work", "play")
+
 default_modes = {
-    'overheadMode' : 3600 * 4,
-        'workMode' : 3600 * 6,
-        'playMode' : 3600 * 6,
+    OVERHEAD : 3600 * 4,
+    WORK : 3600 * 6,
+    PLAY : 3600 * 6,
 }
 
 import logging, os, signal, sys, time, pickle
@@ -78,7 +82,7 @@ try:
 except:
     notify_exhaustion = None
 
-CURRENT_SAVE_VERSION = 1
+CURRENT_SAVE_VERSION = 2
 class TimeClock:
     def __init__(self):
         #Set the Glade file
@@ -97,11 +101,21 @@ class TimeClock:
                 version = loaded[0]
                 if version == CURRENT_SAVE_VERSION:
                     version, total, used = loaded
+                elif version == 1:
+                    version, total_old, used_old = loaded
+                    translate = ["N/A", "btn_overheadMode", "btn_workMode",
+                                 "btn_playMode"]
+                    total = dict( (translate.index(key), value)
+                                  for key, value in total_old.items() )
+                    used = dict( (translate.index(key), value)
+                                 for key, value in used_old.items() )
+                else:
+                    raise ValueError("Save file too new!")
 
                 # Sanity checking could go here.
 
-            except Exception:
-                logging.error("Unable to load save file. Ignoring: %s", SAVE_FILE)
+            except Exception, e:
+                logging.error("Unable to load save file. Ignoring: %s", e)
             else:
                 # File loaded successfully, now we put the data in place.
                 self.total = total
@@ -124,12 +138,14 @@ class TimeClock:
         self.timer_widgets = {}
         self.total, self.used = {}, {}
         for mode in default_modes:
-            widget = self.wTree.get_widget('btn_%s' % mode)
-            self.timer_widgets[widget] = self.wTree.get_widget('progress_%s' % mode)
-            widget_name = widget.get_name()
-            self.total[widget_name] = default_modes[mode]
-            self.used[widget_name] = 0
+            widget = self.wTree.get_widget('btn_%sMode' % MODE_NAMES[mode])
+            widget.mode = mode
+            self.timer_widgets[widget] = \
+                self.wTree.get_widget('progress_%sMode' % MODE_NAMES[mode])
+            self.total[mode] = default_modes[mode]
+            self.used[mode] = 0
         self.selectedBtn = self.wTree.get_widget('btn_sleepMode')
+        self.selectedBtn.mode = SLEEP
 
         # Because PyGTK isn't reliably obeying Glade
         self.update_progressBars()
@@ -141,15 +157,14 @@ class TimeClock:
         """Common code used for initializing and updating the progress bars."""
         for widget in self.timer_widgets:
             pbar = self.timer_widgets[widget]
-            widget_name = widget.get_name()
-            total, val = self.total[widget_name], self.used[widget_name]
+            total, val = self.total[widget.mode], self.used[widget.mode]
             remaining = round(total - val)
             if pbar:
                 if remaining >= 0:
                     pbar.set_text(time.strftime('%H:%M:%S', time.gmtime(remaining)))
                 else:
                     pbar.set_text(time.strftime('-%H:%M:%S', time.gmtime(abs(remaining))))
-                pbar.set_fraction(max(float(remaining) / self.total[widget_name], 0))
+                pbar.set_fraction(max(float(remaining) / self.total[widget.mode], 0))
 
     def playmode_changed(self, widget):
         """Callback for clicking the timer-selection radio buttons"""
@@ -183,9 +198,9 @@ class TimeClock:
 
     def tick(self):
         """Once-per-second timeout callback for updating progress bars."""
-        selected_name = self.selectedBtn.get_name()
-        if selected_name != 'btn_sleepMode':
-            self.used[selected_name] += (time.time() - self.last_tick)
+        mode = self.selectedBtn.mode
+        if mode != SLEEP:
+            self.used[mode] += (time.time() - self.last_tick)
             self.update_progressBars()
         self.last_tick = time.time()
         return True

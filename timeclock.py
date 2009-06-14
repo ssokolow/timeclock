@@ -38,9 +38,18 @@ default_modes = {
         'playMode' : 3600 * 6,
 }
 
-import logging, os, signal, sys, time
+import logging, os, signal, sys, time, pickle
 
 DATA_DIR = os.environ.get('XDG_DATA_HOME', os.path.expanduser('~/.local/share'))
+if not os.path.isdir(DATA_DIR):
+    try:
+        os.makedirs(DATA_DIR)
+    except OSError:
+        raise SystemExit("Aborting: %s exists but is not a directory!"
+                               % DATA_DIR)
+SAVE_FILE = os.path.join(DATA_DIR, "timeclock.sav")
+file_exists = os.path.isfile
+
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
 try:
@@ -69,6 +78,7 @@ try:
 except:
     notify_exhaustion = None
 
+CURRENT_SAVE_VERSION = 1
 class TimeClock:
     def __init__(self):
         #Set the Glade file
@@ -77,7 +87,20 @@ class TimeClock:
 
         self.last_tick = time.time()
         self._init_widgets()
-        #TODO: If present, restore the timer save file.
+
+        # Load the save file, if it exists.
+        if file_exists(SAVE_FILE):
+            try:
+                loaded = pickle.load(open(SAVE_FILE))
+                version = loaded[0]
+                if version == CURRENT_SAVE_VERSION:
+                    version, self.total, self.used = loaded
+            except Exception:
+                # Load failed, ignore the save file.
+                # TODO: Error message.
+                pass
+            else:
+                self.update_progressBars()
 
         # Connect signals
         dic = { "on_mode_toggled"    : self.playmode_changed,
@@ -95,8 +118,9 @@ class TimeClock:
         for mode in default_modes:
             widget = self.wTree.get_widget('btn_%s' % mode)
             self.timer_widgets[widget] = self.wTree.get_widget('progress_%s' % mode)
-            self.total[widget] = default_modes[mode]
-            self.used[widget] = 0
+            widget_name = widget.get_name()
+            self.total[widget_name] = default_modes[mode]
+            self.used[widget_name] = 0
         self.selectedBtn = self.wTree.get_widget('btn_sleepMode')
 
         # Because PyGTK isn't reliably obeying Glade
@@ -108,14 +132,16 @@ class TimeClock:
     def update_progressBars(self):
         """Common code used for initializing and updating the progress bars."""
         for widget in self.timer_widgets:
-            pbar, total, val = self.timer_widgets[widget], self.total[widget], self.used[widget]
+            pbar = self.timer_widgets[widget]
+            widget_name = widget.get_name()
+            total, val = self.total[widget_name], self.used[widget_name]
             remaining = round(total - val)
             if pbar:
                 if remaining >= 0:
                     pbar.set_text(time.strftime('%H:%M:%S', time.gmtime(remaining)))
                 else:
                     pbar.set_text(time.strftime('-%H:%M:%S', time.gmtime(abs(remaining))))
-                pbar.set_fraction(max(float(remaining) / self.total[widget], 0))
+                pbar.set_fraction(max(float(remaining) / self.total[widget_name], 0))
 
     def playmode_changed(self, widget):
         """Callback for clicking the timer-selection radio buttons"""
@@ -124,7 +150,7 @@ class TimeClock:
 
     def reset_clicked(self, widget):
         """Callback for the reset button"""
-        self.used = dict((x, 0) for x in self.used)
+        self.used = dict((x.get_name(), 0) for x in self.used)
         self.update_progressBars()
 
     def prefs_clicked(self, widget):
@@ -133,16 +159,19 @@ class TimeClock:
 
     def tick(self):
         """Once-per-second timeout callback for updating progress bars."""
-        if self.selectedBtn.get_name() != 'btn_sleepMode':
-            self.used[self.selectedBtn] += (time.time() - self.last_tick)
+        selected_name = self.selectedBtn.get_name()
+        if selected_name != 'btn_sleepMode':
+            self.used[selected_name] += (time.time() - self.last_tick)
             self.update_progressBars()
         self.last_tick = time.time()
         return True
 
     def onExit(self):
         """Exit handler for the app. Gets called on everything but xkill.
-        @todo: Save the current timer values to disk."""
-        logging.info("TODO: Shutdown handler")
+
+        Saves the current timer values to disk."""
+        pickle.dump( (CURRENT_SAVE_VERSION, self.total, self.used),
+                     open(SAVE_FILE, "w") )
 
 if __name__ == '__main__':
     from optparse import OptionParser

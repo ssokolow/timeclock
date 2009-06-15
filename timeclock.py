@@ -14,7 +14,6 @@ A simple application to help lazy procrastinators (me) to manage their time.
 @todo: Notification TODO:
  - Set up a callback for timer exhaustion.
  - Build the preferences page.
- - Hook up notify_exhaustion with all appropriate conditionals.
  - Offer to turn the timer text a user-specified color (default: red) when it
    goes into negative values.
  - Add optional sound effects for timer completion using gst-python or PyGame:
@@ -71,18 +70,31 @@ except ImportError:
 
 try:
     import pynotify
+except ImportError:
+    notify_exhaustion = lambda timer_name: None
+else:
     pynotify.init(__appname__)
-    def notify_exhaustion(timer_name):
-        """Display a libnotify notification that the given timer has expired."""
+
+    # Make the notifications in advance,
+    notifications = {}
+    for mode in default_modes:
+        mode_name = MODE_NAMES[mode]
         notification = pynotify.Notification(
-            "%s Time Exhausted" % timer_name.title(),
-            "You have used up your alotted time for %s" % timer_name.lower(),
+            "%s Time Exhausted" % mode_name.title(),
+            "You have used up your alotted time for %s" % mode_name.lower(),
             "dialog-warning")
         notification.set_urgency(pynotify.URGENCY_NORMAL)
         notification.set_timeout(pynotify.EXPIRES_NEVER)
-        notification.show()
-except ImportError:
-    notify_exhaustion = None
+        notification.last_shown = 0
+        notifications[mode] = notification
+
+    def notify_exhaustion(mode):
+        """Display a libnotify notification that the given timer has expired."""
+        notification = notifications[mode]
+        now = time.time()
+        if notification.last_shown + 900 < now:
+            notification.last_shown = now
+            notification.show()
 
 CURRENT_SAVE_VERSION = 2 #: Used for save file versioning
 class TimeClock:
@@ -205,6 +217,10 @@ class TimeClock:
         if mode != SLEEP:
             self.used[mode] += (time.time() - self.last_tick)
             self.update_progressBars()
+
+            if self.used[mode] >= self.total[mode]:
+                notify_exhaustion(mode)
+
         self.last_tick = time.time()
         return True
 

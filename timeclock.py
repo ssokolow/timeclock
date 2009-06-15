@@ -71,8 +71,10 @@ except ImportError:
 try:
     import pynotify
 except ImportError:
+    have_pynotify = False
     notify_exhaustion = lambda timer_name: None
 else:
+    have_pynotify = True
     pynotify.init(__appname__)
 
     # Make the notifications in advance,
@@ -96,7 +98,7 @@ else:
             notification.last_shown = now
             notification.show()
 
-CURRENT_SAVE_VERSION = 2 #: Used for save file versioning
+CURRENT_SAVE_VERSION = 3 #: Used for save file versioning
 class TimeClock:
     def __init__(self):
         #Set the Glade file
@@ -106,6 +108,8 @@ class TimeClock:
         self.last_tick = time.time()
         self._init_widgets()
 
+        self.notify = True
+
         # Load the save file, if it exists.
         if file_exists(SAVE_FILE):
             try:
@@ -114,7 +118,10 @@ class TimeClock:
                 loaded = pickle.load(open(SAVE_FILE))
                 version = loaded[0]
                 if version == CURRENT_SAVE_VERSION:
+                    version, total, used, notify = loaded
+                elif version == 2:
                     version, total, used = loaded
+                    notify = True
                 elif version == 1:
                     version, total_old, used_old = loaded
                     translate = ["N/A", "btn_overheadMode", "btn_workMode",
@@ -123,6 +130,7 @@ class TimeClock:
                                   for key, value in total_old.items() )
                     used = dict( (translate.index(key), value)
                                  for key, value in used_old.items() )
+                    notify = True
                 else:
                     raise ValueError("Save file too new!")
 
@@ -134,6 +142,7 @@ class TimeClock:
                 # File loaded successfully, now we put the data in place.
                 self.total = total
                 self.used = used
+                self.notify = notify
                 self.update_progressBars()
 
         # Connect signals
@@ -192,10 +201,23 @@ class TimeClock:
 
     def prefs_clicked(self, widget):
         """Callback for the preferences button"""
+        # Set the spin widgets to the current settings.
         for mode in self.total:
             widget_spin =  'spinBtn_%sMode' % MODE_NAMES[mode]
             widget = self.wTree.get_widget(widget_spin)
             widget.set_value(self.total[mode] / 3600.0)
+
+        # Set the notify option to the current value, disable and explain if
+        # pynotify is not installed.
+        notify_box = self.wTree.get_widget('checkbutton_notify')
+        notify_box.set_active(self.notify)
+        if have_pynotify:
+            notify_box.set_sensitive(True)
+            notify_box.set_label("display notifications")
+        else:
+            notify_box.set_sensitive(False)
+            notify_box.set_label("display notifications (Requires pynotify)")
+
         self.wTree.get_widget('prefsDlg').show()
 
     def prefs_cancel(self, widget):
@@ -204,10 +226,16 @@ class TimeClock:
 
     def prefs_commit(self, widget):
         """Callback for OKing changes to the preferences"""
+        # Update the time settings for each mode.
         for mode in self.total:
             widget_spin =  'spinBtn_%sMode' % MODE_NAMES[mode]
             widget = self.wTree.get_widget(widget_spin)
             self.total[mode] = (widget.get_value() * 3600)
+
+        notify_box = self.wTree.get_widget('checkbutton_notify')
+        self.notify = notify_box.get_active()
+
+        # Remaining cleanup.
         self.update_progressBars()
         self.wTree.get_widget('prefsDlg').hide()
 
@@ -218,7 +246,7 @@ class TimeClock:
             self.used[mode] += (time.time() - self.last_tick)
             self.update_progressBars()
 
-            if self.used[mode] >= self.total[mode]:
+            if self.used[mode] >= self.total[mode] and self.notify:
                 notify_exhaustion(mode)
 
         self.last_tick = time.time()
@@ -228,7 +256,7 @@ class TimeClock:
         """Exit handler for the app. Gets called on everything but xkill.
 
         Saves the current timer values to disk."""
-        pickle.dump( (CURRENT_SAVE_VERSION, self.total, self.used),
+        pickle.dump( (CURRENT_SAVE_VERSION, self.total, self.used, self.notify),
                      open(SAVE_FILE, "w") )
 
 if __name__ == '__main__':

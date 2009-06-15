@@ -368,7 +368,7 @@
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkCheckButton" id="checkbutton1">
+                  <widget class="GtkCheckButton" id="checkbutton_notify">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="label" translatable="yes">display notifications (Requires pynotify)</property>

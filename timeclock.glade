@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
-<!--Generated with glade3 3.4.5 on Mon Jun 15 12:36:59 2009 -->
+<!--Generated with glade3 3.4.5 on Wed Jun 17 13:11:09 2009 -->
 <glade-interface>
   <widget class="GtkWindow" id="mainWin">
     <property name="visible">True</property>
@@ -16,6 +16,120 @@
         <property name="n_columns">3</property>
         <property name="column_spacing">5</property>
         <property name="row_spacing">5</property>
+        <child>
+          <widget class="GtkRadioButton" id="btn_workMode">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="label" translatable="yes">_Work</property>
+            <property name="use_underline">True</property>
+            <property name="response_id">0</property>
+            <property name="group">btn_sleepMode</property>
+            <signal name="toggled" handler="on_mode_toggled"/>
+          </widget>
+          <packing>
+            <property name="left_attach">1</property>
+            <property name="right_attach">2</property>
+            <property name="top_attach">1</property>
+            <property name="bottom_attach">2</property>
+            <property name="y_options">GTK_EXPAND</property>
+          </packing>
+        </child>
+        <child>
+          <widget class="GtkRadioButton" id="btn_playMode">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="label" translatable="yes">_Leisure</property>
+            <property name="use_underline">True</property>
+            <property name="response_id">0</property>
+            <property name="active">True</property>
+            <property name="group">btn_sleepMode</property>
+            <signal name="toggled" handler="on_mode_toggled"/>
+          </widget>
+          <packing>
+            <property name="left_attach">2</property>
+            <property name="right_attach">3</property>
+            <property name="top_attach">1</property>
+            <property name="bottom_attach">2</property>
+            <property name="y_options">GTK_EXPAND</property>
+          </packing>
+        </child>
+        <child>
+          <widget class="GtkRadioButton" id="btn_overheadMode">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="label" translatable="yes">_Daily Routine</property>
+            <property name="use_underline">True</property>
+            <property name="response_id">0</property>
+            <property name="active">True</property>
+            <property name="group">btn_sleepMode</property>
+            <signal name="toggled" handler="on_mode_toggled"/>
+          </widget>
+          <packing>
+            <property name="top_attach">1</property>
+            <property name="bottom_attach">2</property>
+            <property name="y_options">GTK_EXPAND</property>
+          </packing>
+        </child>
+        <child>
+          <widget class="GtkRadioButton" id="btn_sleepMode">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="tooltip" translatable="yes">Pause all timers</property>
+            <property name="label" translatable="yes">_Asleep</property>
+            <property name="use_underline">True</property>
+            <property name="response_id">0</property>
+            <property name="active">True</property>
+            <signal name="toggled" handler="on_mode_toggled"/>
+          </widget>
+          <packing>
+            <property name="right_attach">2</property>
+            <property name="top_attach">3</property>
+            <property name="bottom_attach">4</property>
+            <property name="y_options">GTK_EXPAND</property>
+          </packing>
+        </child>
+        <child>
+          <widget class="GtkProgressBar" id="progress_workMode">
+            <property name="visible">True</property>
+            <property name="orientation">GTK_PROGRESS_RIGHT_TO_LEFT</property>
+          </widget>
+          <packing>
+            <property name="left_attach">1</property>
+            <property name="right_attach">2</property>
+            <property name="y_options">GTK_EXPAND</property>
+          </packing>
+        </child>
+        <child>
+          <widget class="GtkProgressBar" id="progress_playMode">
+            <property name="visible">True</property>
+            <property name="orientation">GTK_PROGRESS_RIGHT_TO_LEFT</property>
+          </widget>
+          <packing>
+            <property name="left_attach">2</property>
+            <property name="right_attach">3</property>
+            <property name="y_options">GTK_EXPAND</property>
+          </packing>
+        </child>
+        <child>
+          <widget class="GtkProgressBar" id="progress_overheadMode">
+            <property name="visible">True</property>
+            <property name="orientation">GTK_PROGRESS_RIGHT_TO_LEFT</property>
+          </widget>
+          <packing>
+            <property name="y_options">GTK_EXPAND</property>
+          </packing>
+        </child>
+        <child>
+          <widget class="GtkHSeparator" id="mainWin_hseparator">
+            <property name="visible">True</property>
+          </widget>
+          <packing>
+            <property name="right_attach">3</property>
+            <property name="top_attach">2</property>
+            <property name="bottom_attach">3</property>
+            <property name="y_padding">5</property>
+          </packing>
+        </child>
         <child>
           <widget class="GtkHBox" id="mainWin_prefs_reset_hbox">
             <property name="visible">True</property>
@@ -64,120 +178,6 @@
             <property name="y_options">GTK_EXPAND</property>
           </packing>
         </child>
-        <child>
-          <widget class="GtkHSeparator" id="mainWin_hseparator">
-            <property name="visible">True</property>
-          </widget>
-          <packing>
-            <property name="right_attach">3</property>
-            <property name="top_attach">2</property>
-            <property name="bottom_attach">3</property>
-            <property name="y_padding">5</property>
-          </packing>
-        </child>
-        <child>
-          <widget class="GtkProgressBar" id="progress_overheadMode">
-            <property name="visible">True</property>
-            <property name="orientation">GTK_PROGRESS_RIGHT_TO_LEFT</property>
-          </widget>
-          <packing>
-            <property name="y_options">GTK_EXPAND</property>
-          </packing>
-        </child>
-        <child>
-          <widget class="GtkProgressBar" id="progress_playMode">
-            <property name="visible">True</property>
-            <property name="orientation">GTK_PROGRESS_RIGHT_TO_LEFT</property>
-          </widget>
-          <packing>
-            <property name="left_attach">2</property>
-            <property name="right_attach">3</property>
-            <property name="y_options">GTK_EXPAND</property>
-          </packing>
-        </child>
-        <child>
-          <widget class="GtkProgressBar" id="progress_workMode">
-            <property name="visible">True</property>
-            <property name="orientation">GTK_PROGRESS_RIGHT_TO_LEFT</property>
-          </widget>
-          <packing>
-            <property name="left_attach">1</property>
-            <property name="right_attach">2</property>
-            <property name="y_options">GTK_EXPAND</property>
-          </packing>
-        </child>
-        <child>
-          <widget class="GtkRadioButton" id="btn_sleepMode">
-            <property name="visible">True</property>
-            <property name="can_focus">True</property>
-            <property name="tooltip" translatable="yes">Pause all timers</property>
-            <property name="label" translatable="yes">_Snooze</property>
-            <property name="use_underline">True</property>
-            <property name="response_id">0</property>
-            <property name="active">True</property>
-            <signal name="toggled" handler="on_mode_toggled"/>
-          </widget>
-          <packing>
-            <property name="right_attach">2</property>
-            <property name="top_attach">3</property>
-            <property name="bottom_attach">4</property>
-            <property name="y_options">GTK_EXPAND</property>
-          </packing>
-        </child>
-        <child>
-          <widget class="GtkRadioButton" id="btn_overheadMode">
-            <property name="visible">True</property>
-            <property name="can_focus">True</property>
-            <property name="label" translatable="yes">_Daily Routine</property>
-            <property name="use_underline">True</property>
-            <property name="response_id">0</property>
-            <property name="active">True</property>
-            <property name="group">btn_sleepMode</property>
-            <signal name="toggled" handler="on_mode_toggled"/>
-          </widget>
-          <packing>
-            <property name="top_attach">1</property>
-            <property name="bottom_attach">2</property>
-            <property name="y_options">GTK_EXPAND</property>
-          </packing>
-        </child>
-        <child>
-          <widget class="GtkRadioButton" id="btn_playMode">
-            <property name="visible">True</property>
-            <property name="can_focus">True</property>
-            <property name="label" translatable="yes">_Leisure</property>
-            <property name="use_underline">True</property>
-            <property name="response_id">0</property>
-            <property name="active">True</property>
-            <property name="group">btn_sleepMode</property>
-            <signal name="toggled" handler="on_mode_toggled"/>
-          </widget>
-          <packing>
-            <property name="left_attach">2</property>
-            <property name="right_attach">3</property>
-            <property name="top_attach">1</property>
-            <property name="bottom_attach">2</property>
-            <property name="y_options">GTK_EXPAND</property>
-          </packing>
-        </child>
-        <child>
-          <widget class="GtkRadioButton" id="btn_workMode">
-            <property name="visible">True</property>
-            <property name="can_focus">True</property>
-            <property name="label" translatable="yes">_Work</property>
-            <property name="use_underline">True</property>
-            <property name="response_id">0</property>
-            <property name="group">btn_sleepMode</property>
-            <signal name="toggled" handler="on_mode_toggled"/>
-          </widget>
-          <packing>
-            <property name="left_attach">1</property>
-            <property name="right_attach">2</property>
-            <property name="top_attach">1</property>
-            <property name="bottom_attach">2</property>
-            <property name="y_options">GTK_EXPAND</property>
-          </packing>
-        </child>
       </widget>
     </child>
   </widget>
@@ -203,79 +203,42 @@
                 <property name="column_spacing">5</property>
                 <property name="row_spacing">5</property>
                 <child>
-                  <widget class="GtkSpinButton" id="spinBtn_overheadMode">
+                  <widget class="GtkLabel" id="lbl_hours3">
                     <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="xalign">1</property>
-                    <property name="adjustment">4 1 15 0.25 1 1</property>
-                    <property name="digits">2</property>
-                    <property name="numeric">True</property>
+                    <property name="xalign">0</property>
+                    <property name="label" translatable="yes">Hours</property>
                   </widget>
                   <packing>
-                    <property name="left_attach">1</property>
-                    <property name="right_attach">2</property>
-                    <property name="x_options">GTK_FILL</property>
-                    <property name="y_options"></property>
-                  </packing>
-                </child>
-                <child>
-                  <widget class="GtkLabel" id="lbl_overheadMode">
-                    <property name="visible">True</property>
-                    <property name="xalign">1</property>
-                    <property name="label" translatable="yes">Daily _Routine:</property>
-                    <property name="use_markup">True</property>
-                    <property name="use_underline">True</property>
-                    <property name="mnemonic_widget">spinBtn_overheadMode</property>
-                  </widget>
-                  <packing>
-                    <property name="y_options"></property>
-                  </packing>
-                </child>
-                <child>
-                  <widget class="GtkLabel" id="lbl_workMode">
-                    <property name="visible">True</property>
-                    <property name="xalign">1</property>
-                    <property name="label" translatable="yes">_Work:</property>
-                    <property name="use_markup">True</property>
-                    <property name="use_underline">True</property>
-                    <property name="mnemonic_widget">spinBtn_workMode</property>
-                  </widget>
-                  <packing>
-                    <property name="top_attach">1</property>
-                    <property name="bottom_attach">2</property>
-                    <property name="y_options"></property>
-                  </packing>
-                </child>
-                <child>
-                  <widget class="GtkLabel" id="lbl_playMode">
-                    <property name="visible">True</property>
-                    <property name="xalign">1</property>
-                    <property name="label" translatable="yes">_Leisure:</property>
-                    <property name="use_markup">True</property>
-                    <property name="use_underline">True</property>
-                    <property name="mnemonic_widget">spinBtn_playMode</property>
-                  </widget>
-                  <packing>
+                    <property name="left_attach">2</property>
+                    <property name="right_attach">3</property>
                     <property name="top_attach">2</property>
                     <property name="bottom_attach">3</property>
                     <property name="y_options"></property>
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkSpinButton" id="spinBtn_workMode">
+                  <widget class="GtkLabel" id="lbl_hours2">
                     <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="xalign">1</property>
-                    <property name="adjustment">6 0 14 0.25 1 1</property>
-                    <property name="digits">2</property>
-                    <property name="numeric">True</property>
+                    <property name="xalign">0</property>
+                    <property name="label" translatable="yes">Hours</property>
                   </widget>
                   <packing>
-                    <property name="left_attach">1</property>
-                    <property name="right_attach">2</property>
+                    <property name="left_attach">2</property>
+                    <property name="right_attach">3</property>
                     <property name="top_attach">1</property>
                     <property name="bottom_attach">2</property>
-                    <property name="x_options">GTK_FILL</property>
+                    <property name="y_options"></property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkLabel" id="lbl_hours1">
+                    <property name="visible">True</property>
+                    <property name="xalign">0</property>
+                    <property name="label" translatable="yes">Hours</property>
+                  </widget>
+                  <packing>
+                    <property name="left_attach">2</property>
+                    <property name="right_attach">3</property>
                     <property name="y_options"></property>
                   </packing>
                 </child>
@@ -298,42 +261,79 @@
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkLabel" id="lbl_hours1">
+                  <widget class="GtkSpinButton" id="spinBtn_workMode">
                     <property name="visible">True</property>
-                    <property name="xalign">0</property>
-                    <property name="label" translatable="yes">Hours</property>
+                    <property name="can_focus">True</property>
+                    <property name="xalign">1</property>
+                    <property name="adjustment">6 0 14 0.25 1 1</property>
+                    <property name="digits">2</property>
+                    <property name="numeric">True</property>
                   </widget>
                   <packing>
-                    <property name="left_attach">2</property>
-                    <property name="right_attach">3</property>
+                    <property name="left_attach">1</property>
+                    <property name="right_attach">2</property>
+                    <property name="top_attach">1</property>
+                    <property name="bottom_attach">2</property>
+                    <property name="x_options">GTK_FILL</property>
                     <property name="y_options"></property>
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkLabel" id="lbl_hours2">
+                  <widget class="GtkLabel" id="lbl_playMode">
                     <property name="visible">True</property>
-                    <property name="xalign">0</property>
-                    <property name="label" translatable="yes">Hours</property>
+                    <property name="xalign">1</property>
+                    <property name="label" translatable="yes">_Leisure:</property>
+                    <property name="use_markup">True</property>
+                    <property name="use_underline">True</property>
+                    <property name="mnemonic_widget">spinBtn_playMode</property>
                   </widget>
                   <packing>
-                    <property name="left_attach">2</property>
-                    <property name="right_attach">3</property>
+                    <property name="top_attach">2</property>
+                    <property name="bottom_attach">3</property>
+                    <property name="y_options"></property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkLabel" id="lbl_workMode">
+                    <property name="visible">True</property>
+                    <property name="xalign">1</property>
+                    <property name="label" translatable="yes">_Work:</property>
+                    <property name="use_markup">True</property>
+                    <property name="use_underline">True</property>
+                    <property name="mnemonic_widget">spinBtn_workMode</property>
+                  </widget>
+                  <packing>
                     <property name="top_attach">1</property>
                     <property name="bottom_attach">2</property>
                     <property name="y_options"></property>
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkLabel" id="lbl_hours3">
+                  <widget class="GtkLabel" id="lbl_overheadMode">
                     <property name="visible">True</property>
-                    <property name="xalign">0</property>
-                    <property name="label" translatable="yes">Hours</property>
+                    <property name="xalign">1</property>
+                    <property name="label" translatable="yes">Daily _Routine:</property>
+                    <property name="use_markup">True</property>
+                    <property name="use_underline">True</property>
+                    <property name="mnemonic_widget">spinBtn_overheadMode</property>
                   </widget>
                   <packing>
-                    <property name="left_attach">2</property>
-                    <property name="right_attach">3</property>
-                    <property name="top_attach">2</property>
-                    <property name="bottom_attach">3</property>
+                    <property name="y_options"></property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkSpinButton" id="spinBtn_overheadMode">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="xalign">1</property>
+                    <property name="adjustment">4 1 15 0.25 1 1</property>
+                    <property name="digits">2</property>
+                    <property name="numeric">True</property>
+                  </widget>
+                  <packing>
+                    <property name="left_attach">1</property>
+                    <property name="right_attach">2</property>
+                    <property name="x_options">GTK_FILL</property>
                     <property name="y_options"></property>
                   </packing>
                 </child>
@@ -357,17 +357,6 @@
                 <property name="border_width">5</property>
                 <property name="n_rows">2</property>
                 <child>
-                  <widget class="GtkLabel" id="label1">
-                    <property name="visible">True</property>
-                    <property name="xalign">0</property>
-                    <property name="label" translatable="yes">When a timer runs out...</property>
-                  </widget>
-                  <packing>
-                    <property name="y_options"></property>
-                    <property name="y_padding">5</property>
-                  </packing>
-                </child>
-                <child>
                   <widget class="GtkCheckButton" id="checkbutton_notify">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
@@ -379,6 +368,17 @@
                     <property name="top_attach">1</property>
                     <property name="bottom_attach">2</property>
                     <property name="y_options"></property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkLabel" id="label1">
+                    <property name="visible">True</property>
+                    <property name="xalign">0</property>
+                    <property name="label" translatable="yes">When a timer runs out...</property>
+                  </widget>
+                  <packing>
+                    <property name="y_options"></property>
+                    <property name="y_padding">5</property>
                   </packing>
                 </child>
               </widget>

@@ -197,6 +197,7 @@ class TimeClock:
     def reset_clicked(self, widget):
         """Callback for the reset button"""
         self.used = dict((x, 0) for x in self.used)
+        self.wTree.get_widget('btn_%sMode' % MODE_NAMES[SLEEP]).set_active(True)
         self.update_progressBars()
 
     def prefs_clicked(self, widget):

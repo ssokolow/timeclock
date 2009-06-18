@@ -5,6 +5,8 @@ A simple application to help lazy procrastinators (me) to manage their time.
 
 @todo: Planned improvements:
  - Clicking the preferences button while the dialog is shown should do nothing.
+ - Should I offer preferences options for remembering window position and things
+   like "always on top" and "on all desktops"?
  - Rework the design to minimize dependence on GTK+ (in case I switch to Qt for
    Phonon)
  - Have the system complain if overhead + work + play + sleep (8 hours) > 24
@@ -43,6 +45,9 @@ default_modes = {
 }
 
 import logging, os, signal, sys, time, pickle
+
+SELF_DIR = os.path.dirname(os.path.abspath(__file__))
+print SELF_DIR
 
 DATA_DIR = os.environ.get('XDG_DATA_HOME', os.path.expanduser('~/.local/share'))
 if not os.path.isdir(DATA_DIR):
@@ -102,7 +107,7 @@ CURRENT_SAVE_VERSION = 3 #: Used for save file versioning
 class TimeClock:
     def __init__(self):
         #Set the Glade file
-        self.gladefile = "timeclock.glade"
+        self.gladefile = os.path.join(SELF_DIR, "timeclock.glade")
         self.wTree = gtk.glade.XML(self.gladefile)
 
         self.last_tick = time.time()

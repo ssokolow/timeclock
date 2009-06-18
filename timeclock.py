@@ -4,23 +4,24 @@
 A simple application to help lazy procrastinators (me) to manage their time.
 
 @todo: Planned improvements:
+ - Change the notification messages so "Play" becomes "Leisure".
  - Clicking the preferences button while the dialog is shown should do nothing.
  - Should I offer preferences options for remembering window position and things
    like "always on top" and "on all desktops"?
- - Rework the design to minimize dependence on GTK+ (in case I switch to Qt for
-   Phonon)
  - Have the system complain if overhead + work + play + sleep (8 hours) > 24
    and enforce minimums of 1 hour for leisure and overhead.
+ - Rework the design to minimize dependence on GTK+ (in case I switch to Qt for
+   Phonon)
  - Report PyGTK's uncatchable xkill response on the bug tracker.
 
 @todo: Notification TODO:
- - Set up a callback for timer exhaustion.
- - Build the preferences page.
  - Offer to turn the timer text a user-specified color (default: red) when it
    goes into negative values.
+ - Build the preferences page.
  - Add optional sound effects for timer completion using gst-python or PyGame:
    - http://mail.python.org/pipermail/python-list/2006-October/582445.html
    - http://www.jonobacon.org/2006/08/28/getting-started-with-gstreamer-with-python/
+ - Set up a callback for timer exhaustion.
 
 @todo: Consider:
  - Changing this into a Plasma widget

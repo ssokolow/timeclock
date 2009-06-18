@@ -4,11 +4,10 @@
 A simple application to help lazy procrastinators (me) to manage their time.
 
 @todo: Planned improvements:
- - Change the notification messages so "Play" becomes "Leisure".
  - Clicking the preferences button while the dialog is shown should do nothing.
  - Should I offer preferences options for remembering window position and things
    like "always on top" and "on all desktops"?
- - Have the system complain if overhead + work + play + sleep (8 hours) > 24
+ - Have the system complain if overhead + work + leisure + sleep (8 hours) > 24
    and enforce minimums of 1 hour for leisure and overhead.
  - Rework the design to minimize dependence on GTK+ (in case I switch to Qt for
    Phonon)
@@ -36,13 +35,13 @@ __version__ = "0.2"
 __license__ = "GNU GPL 2.0 or later"
 
 # Mode constants.
-SLEEP, OVERHEAD, WORK, PLAY = range(4)
-MODE_NAMES = ("sleep", "overhead", "work", "play")
+SLEEP, OVERHEAD, WORK, LEISURE = range(4)
+MODE_NAMES = ("sleep", "overhead", "work", "leisure")
 
 default_modes = {
     OVERHEAD : int(3600 * 3.5),
     WORK : 3600 * 6,
-    PLAY : int(3600 * 5.5),
+    LEISURE : int(3600 * 5.5),
 }
 
 import logging, os, signal, sys, time, pickle
@@ -152,7 +151,7 @@ class TimeClock:
                 self.update_progressBars()
 
         # Connect signals
-        dic = { "on_mode_toggled"    : self.playmode_changed,
+        dic = { "on_mode_toggled"    : self.mode_changed,
                 "on_reset_clicked"   : self.reset_clicked,
                 "on_prefs_clicked"   : self.prefs_clicked,
                 "on_prefs_commit"    : self.prefs_commit,
@@ -195,7 +194,7 @@ class TimeClock:
                     pbar.set_text(time.strftime('-%H:%M:%S', time.gmtime(abs(remaining))))
                 pbar.set_fraction(max(float(remaining) / self.total[widget.mode], 0))
 
-    def playmode_changed(self, widget):
+    def mode_changed(self, widget):
         """Callback for clicking the timer-selection radio buttons"""
         if widget.get_active():
             self.selectedBtn = widget

@@ -35,7 +35,7 @@
           </packing>
         </child>
         <child>
-          <widget class="GtkRadioButton" id="btn_playMode">
+          <widget class="GtkRadioButton" id="btn_leisureMode">
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <property name="label" translatable="yes">_Leisure</property>
@@ -100,7 +100,7 @@
           </packing>
         </child>
         <child>
-          <widget class="GtkProgressBar" id="progress_playMode">
+          <widget class="GtkProgressBar" id="progress_leisureMode">
             <property name="visible">True</property>
             <property name="orientation">GTK_PROGRESS_RIGHT_TO_LEFT</property>
           </widget>
@@ -243,7 +243,7 @@
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkSpinButton" id="spinBtn_playMode">
+                  <widget class="GtkSpinButton" id="spinBtn_leisureMode">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="xalign">1</property>
@@ -279,13 +279,13 @@
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkLabel" id="lbl_playMode">
+                  <widget class="GtkLabel" id="lbl_leisureMode">
                     <property name="visible">True</property>
                     <property name="xalign">1</property>
                     <property name="label" translatable="yes">_Leisure:</property>
                     <property name="use_markup">True</property>
                     <property name="use_underline">True</property>
-                    <property name="mnemonic_widget">spinBtn_playMode</property>
+                    <property name="mnemonic_widget">spinBtn_leisureMode</property>
                   </widget>
                   <packing>
                     <property name="top_attach">2</property>

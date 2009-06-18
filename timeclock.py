@@ -37,9 +37,9 @@ SLEEP, OVERHEAD, WORK, PLAY = range(4)
 MODE_NAMES = ("sleep", "overhead", "work", "play")
 
 default_modes = {
-    OVERHEAD : 3600 * 4,
+    OVERHEAD : int(3600 * 3.5),
     WORK : 3600 * 6,
-    PLAY : 3600 * 6,
+    PLAY : int(3600 * 5.5),
 }
 
 import logging, os, signal, sys, time, pickle

@@ -4,6 +4,8 @@
 A simple application to help lazy procrastinators (me) to manage their time.
 
 @todo: Planned improvements:
+ - Make sure that timer values are auto-saved every minute or so to protect from
+   crash-induced data loss.
  - Clicking the preferences button while the dialog is shown should do nothing.
  - Should I offer preferences options for remembering window position and things
    like "always on top" and "on all desktops"?

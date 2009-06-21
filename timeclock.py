@@ -52,8 +52,6 @@ default_modes = {
 import logging, os, signal, sys, time, pickle
 
 SELF_DIR = os.path.dirname(os.path.abspath(__file__))
-print SELF_DIR
-
 DATA_DIR = os.environ.get('XDG_DATA_HOME', os.path.expanduser('~/.local/share'))
 if not os.path.isdir(DATA_DIR):
     try:

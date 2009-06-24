@@ -4,6 +4,8 @@
 A simple application to help lazy procrastinators (me) to manage their time.
 
 @todo: Planned improvements:
+ - I think PyNotify takes HTML as input. Confirm that I should be XML-escaping
+   ampersands and friends and then add it.
  - Make sure that timer values are auto-saved every minute or so to protect from
    crash-induced data loss.
  - Clicking the preferences button while the dialog is shown shouldn't reset the
@@ -30,6 +32,12 @@ A simple application to help lazy procrastinators (me) to manage their time.
 @todo: Consider:
  - Changing this into a Plasma widget
  - Using PyKDE's bindings to the KDE Notification system
+
+@todo: Publish this on listing sites:
+ - http://gtk-apps.org/
+ - http://pypi.python.org/pypi
+ - http://freshmeat.net/
+ - http://www.ohloh.net/
 
 @newfield appname: Application Name
 """

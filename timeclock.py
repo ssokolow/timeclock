@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 A simple application to help lazy procrastinators (me) to manage their time.
+See http://ssokolow.github.com/timeclock/ for a screenshot.
 
 @todo: Planned improvements:
  - I think PyNotify takes HTML as input. Confirm that I should be XML-escaping

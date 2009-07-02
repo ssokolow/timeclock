@@ -1,6 +1,6 @@
-The Procrastinator's Timeclock is a simple application designed to help easily-
-distracted people remain focused on getting a certain amount of work done per
-day while remaining flexible enough to adapt to changes in motivation, mood,
+The Procrastinator's Timeclock is a simple application designed to help
+easily-distracted people remain focused on getting a certain amount of work done
+per day while remaining flexible enough to adapt to changes in motivation, mood,
 and external stresses.
 
 It does this by working to counter several key contributors to procrastination:
@@ -26,3 +26,7 @@ following in mind while using the timeclock:
   Don't let this discourage you. Once you get used to having a guaranteed
   minimum amount of leisure time, it'll become easier to motivate yourself to
   work first and relax afterward.
+- Given a tendency to only want to work when all leisure time is exhausted,
+  it's probably a good idea to budget an extra hour or two for sleep so you
+  won't end up sleep-deprived if you use up all of your daily routine time
+  before you begin preparing for bed.

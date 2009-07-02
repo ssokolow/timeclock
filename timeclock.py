@@ -37,8 +37,6 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
 @todo: Publish this on listing sites:
  - http://gtk-apps.org/
  - http://pypi.python.org/pypi
- - http://freshmeat.net/
- - http://www.ohloh.net/
 
 @newfield appname: Application Name
 """
@@ -172,6 +170,9 @@ class TimeClock:
         self.wTree.signal_autoconnect(dic)
         gobject.timeout_add(1000, self.tick)
 
+        # Save timer states every five minutes in case of crashes
+        gobject.timeout_add(1000 * 60 * 5, self.doSave)
+
     def _init_widgets(self):
         """All non-signal, non-glade widget initialization."""
         # Set up the data structures
@@ -270,12 +271,14 @@ class TimeClock:
         self.last_tick = time.time()
         return True
 
-    def onExit(self):
-        """Exit handler for the app. Gets called on everything but xkill.
+    def doSave(self):
+        """Exit/Timeout handler for the app. Gets called every five minutes and
+        on every type of clean exit except xkill. (PyGTK doesn't let you)
 
         Saves the current timer values to disk."""
         pickle.dump( (CURRENT_SAVE_VERSION, self.total, self.used, self.notify),
                      open(SAVE_FILE, "w") )
+        return True
 
 if __name__ == '__main__':
     from optparse import OptionParser
@@ -287,7 +290,7 @@ if __name__ == '__main__':
     app = TimeClock()
 
     # Make sure that state is saved to disk on exit.
-    sys.exitfunc = app.onExit
+    sys.exitfunc = app.doSave
     signal.signal(signal.SIGTERM, lambda signum, stack_frame: sys.exit(0))
     signal.signal(signal.SIGHUP, lambda signum, stack_frame: sys.exit(0))
     signal.signal(signal.SIGQUIT, lambda signum, stack_frame: sys.exit(0))

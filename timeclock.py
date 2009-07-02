@@ -170,9 +170,6 @@ class TimeClock:
         self.wTree.signal_autoconnect(dic)
         gobject.timeout_add(1000, self.tick)
 
-        # Save timer states every five minutes in case of crashes
-        gobject.timeout_add(1000 * 60 * 5, self.doSave)
-
     def _init_widgets(self):
         """All non-signal, non-glade widget initialization."""
         # Set up the data structures
@@ -187,6 +184,7 @@ class TimeClock:
             self.used[mode] = 0
         self.selectedBtn = self.wTree.get_widget('btn_sleepMode')
         self.selectedBtn.mode = SLEEP
+        self.save_timeout = None
 
         # Because PyGTK isn't reliably obeying Glade
         self.update_progressBars()
@@ -211,6 +209,14 @@ class TimeClock:
         """Callback for clicking the timer-selection radio buttons"""
         if widget.get_active():
             self.selectedBtn = widget
+
+        if self.selectedBtn.mode == SLEEP and self.save_timeout:
+            gobject.source_remove(self.save_timeout)
+            self.save_timeout = None
+            self.doSave()
+        elif self.selectedBtn.mode != SLEEP and not self.save_timeout:
+            # Save timer states every five minutes in case of crashes
+            self.save_timeout = gobject.timeout_add(1000 * 60 * 5, self.doSave)
 
     def reset_clicked(self, widget):
         """Callback for the reset button"""

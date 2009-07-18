@@ -7,8 +7,6 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
 @todo: Planned improvements:
  - I think PyNotify takes HTML as input. Confirm that I should be XML-escaping
    ampersands and friends and then add it.
- - Make sure that timer values are auto-saved every minute or so to protect from
-   crash-induced data loss.
  - Clicking the preferences button while the dialog is shown shouldn't reset the
    unsaved preference changes.
  - Figure out some intuitive, non-distracting way to allow the user to make
@@ -24,15 +22,15 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
 @todo: Notification TODO:
  - Offer to turn the timer text a user-specified color (default: red) when it
    goes into negative values.
- - Build the preferences page.
+ - Finish the preferences page.
  - Add optional sound effects for timer completion using gst-python or PyGame:
    - http://mail.python.org/pipermail/python-list/2006-October/582445.html
    - http://www.jonobacon.org/2006/08/28/getting-started-with-gstreamer-with-python/
  - Set up a callback for timer exhaustion.
 
 @todo: Consider:
- - Changing this into a Plasma widget
- - Using PyKDE's bindings to the KDE Notification system
+ - Changing this into a Plasma widget (Without dropping PyGTK support)
+ - Using PyKDE's bindings to the KDE Notification system (for the Plasma widget)
 
 @todo: Publish this on listing sites:
  - http://gtk-apps.org/
@@ -58,7 +56,7 @@ default_modes = {
 
 import logging, os, signal, sys, time, pickle
 
-SELF_DIR = os.path.dirname(os.path.abspath(__file__))
+SELF_DIR = os.path.dirname(os.path.realpath(__file__))
 DATA_DIR = os.environ.get('XDG_DATA_HOME', os.path.expanduser('~/.local/share'))
 if not os.path.isdir(DATA_DIR):
     try:

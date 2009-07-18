@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
-<!--Generated with glade3 3.4.5 on Wed Jun 17 13:11:09 2009 -->
+<!--Generated with glade3 3.4.5 on Sat Jul 18 15:45:13 2009 -->
 <glade-interface>
   <widget class="GtkWindow" id="mainWin">
     <property name="visible">True</property>
     <property name="title" translatable="yes">Time Clock</property>
     <property name="resizable">False</property>
     <property name="window_position">GTK_WIN_POS_CENTER</property>
+    <property name="icon">icons/timeclock_48x48.png</property>
     <signal name="destroy" handler="on_mainWin_destroy"/>
     <child>
       <widget class="GtkTable" id="mainWin_layout">

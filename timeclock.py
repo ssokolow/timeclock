@@ -97,7 +97,7 @@ else:
         notification = pynotify.Notification(
             "%s Time Exhausted" % mode_name.title(),
             "You have used up your alotted time for %s" % mode_name.lower(),
-            "dialog-warning")
+            os.path.join(SELF_DIR, "icons", "timeclock_48x48.png"))
         notification.set_urgency(pynotify.URGENCY_NORMAL)
         notification.set_timeout(pynotify.EXPIRES_NEVER)
         notification.last_shown = 0

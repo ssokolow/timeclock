@@ -296,10 +296,13 @@ if __name__ == '__main__':
     #    default=False, help="Increase verbosity")
     parser.add_option('-m', '--initial-mode',
                       action="store", dest="mode", default="sleep",
-                      metavar="MODE", help="start in MODE")
+                      metavar="MODE", help="start in MODE. (Use 'help' for a list)")
 
     opts, args = parser.parse_args()
-    if (opts.mode not in MODE_NAMES):
+    if opts.mode == 'help':
+        print "Valid mode names are: %s" % ', '.join(MODE_NAMES)
+        parser.exit(0)
+    elif (opts.mode not in MODE_NAMES):
         print "Mode '%s' not recognized, defaulting to sleep." % opts.mode
         opts.mode = "sleep"
     app = TimeClock(default_mode=opts.mode)

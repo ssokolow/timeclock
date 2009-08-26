@@ -113,7 +113,9 @@ else:
 
 CURRENT_SAVE_VERSION = 3 #: Used for save file versioning
 class TimeClock:
-    def __init__(self):
+    def __init__(self, default_mode="sleep"):
+        self.default_mode = default_mode
+
         #Set the Glade file
         self.gladefile = os.path.join(SELF_DIR, "timeclock.glade")
         self.wTree = gtk.glade.XML(self.gladefile)
@@ -180,15 +182,18 @@ class TimeClock:
                 self.wTree.get_widget('progress_%sMode' % MODE_NAMES[mode])
             self.total[mode] = default_modes[mode]
             self.used[mode] = 0
-        self.selectedBtn = self.wTree.get_widget('btn_sleepMode')
-        self.selectedBtn.mode = SLEEP
+        sleepBtn = self.wTree.get_widget('btn_sleepMode')
+        sleepBtn.mode = SLEEP
+
+        self.selectedBtn = self.wTree.get_widget('btn_%sMode' % self.default_mode)
+        self.selectedBtn.set_active(True)
         self.save_timeout = None
 
         # Because PyGTK isn't reliably obeying Glade
         self.update_progressBars()
         for widget in self.timer_widgets:
             widget.set_property('draw-indicator', False)
-        self.selectedBtn.set_property('draw-indicator', False)
+        sleepBtn.set_property('draw-indicator', False)
 
     def update_progressBars(self):
         """Common code used for initializing and updating the progress bars."""
@@ -289,9 +294,15 @@ if __name__ == '__main__':
     parser = OptionParser(version="%%prog v%s" % __version__)
     #parser.add_option('-v', '--verbose', action="store_true", dest="verbose",
     #    default=False, help="Increase verbosity")
+    parser.add_option('-m', '--initial-mode',
+                      action="store", dest="mode", default="sleep",
+                      metavar="MODE", help="start in MODE")
 
     opts, args = parser.parse_args()
-    app = TimeClock()
+    if (opts.mode not in MODE_NAMES):
+        print "Mode '%s' not recognized, defaulting to sleep." % opts.mode
+        opts.mode = "sleep"
+    app = TimeClock(default_mode=opts.mode)
 
     # Make sure that state is saved to disk on exit.
     sys.exitfunc = app.doSave

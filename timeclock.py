@@ -121,6 +121,7 @@ class TimeClock:
         self.wTree = gtk.glade.XML(self.gladefile)
 
         self.last_tick = time.time()
+        self.last_save = 0
         self._init_widgets()
 
         self.notify = True
@@ -213,13 +214,9 @@ class TimeClock:
         if widget.get_active():
             self.selectedBtn = widget
 
-        if self.selectedBtn.mode == SLEEP and self.save_timeout:
+        if self.selectedBtn.mode == SLEEP:
             gobject.source_remove(self.save_timeout)
-            self.save_timeout = None
             self.doSave()
-        elif self.selectedBtn.mode != SLEEP and not self.save_timeout:
-            # Save timer states every five minutes in case of crashes
-            self.save_timeout = gobject.timeout_add(1000 * 60 * 5, self.doSave)
 
     def reset_clicked(self, widget):
         """Callback for the reset button"""
@@ -270,14 +267,19 @@ class TimeClock:
     def tick(self):
         """Once-per-second timeout callback for updating progress bars."""
         mode = self.selectedBtn.mode
+        now = time.time()
         if mode != SLEEP:
-            self.used[mode] += (time.time() - self.last_tick)
+            self.used[mode] += (now - self.last_tick)
             self.update_progressBars()
 
             if self.used[mode] >= self.total[mode] and self.notify:
                 notify_exhaustion(mode)
 
-        self.last_tick = time.time()
+            if now >= (self.last_save + (5 * 60)):
+                self.doSave()
+
+        self.last_tick = now
+
         return True
 
     def doSave(self):
@@ -287,6 +289,7 @@ class TimeClock:
         Saves the current timer values to disk."""
         pickle.dump( (CURRENT_SAVE_VERSION, self.total, self.used, self.notify),
                      open(SAVE_FILE, "w") )
+        self.last_save = time.time()
         return True
 
 if __name__ == '__main__':

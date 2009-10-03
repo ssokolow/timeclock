@@ -20,6 +20,8 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
  - Report PyGTK's uncatchable xkill response on the bug tracker.
 
 @todo: Notification TODO:
+ - Provide a fallback for when libnotify notifications are unavailable.
+   (eg. Windows and Slax LiveCD/LiveUSB desktops)
  - Offer to turn the timer text a user-specified color (default: red) when it
    goes into negative values.
  - Finish the preferences page.
@@ -75,11 +77,9 @@ try:
 except:
     pass
 
-try:
-    import gtk, gobject
-    import gtk.glade
-except ImportError:
-    sys.exit(1)
+import gtk, gobject
+import gtk.glade
+import gtkexcepthook
 
 try:
     import pynotify

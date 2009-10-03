@@ -188,7 +188,6 @@ class TimeClock:
 
         self.selectedBtn = self.wTree.get_widget('btn_%sMode' % self.default_mode)
         self.selectedBtn.set_active(True)
-        self.save_timeout = None
 
         # Because PyGTK isn't reliably obeying Glade
         self.update_progressBars()
@@ -215,7 +214,6 @@ class TimeClock:
             self.selectedBtn = widget
 
         if self.selectedBtn.mode == SLEEP:
-            gobject.source_remove(self.save_timeout)
             self.doSave()
 
     def reset_clicked(self, widget):

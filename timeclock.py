@@ -67,6 +67,7 @@ if not os.path.isdir(DATA_DIR):
         raise SystemExit("Aborting: %s exists but is not a directory!"
                                % DATA_DIR)
 SAVE_FILE = os.path.join(DATA_DIR, "timeclock.sav")
+SAVE_INTERVAL = 60 * 5  # 5 Minutes
 file_exists = os.path.isfile
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
@@ -188,7 +189,6 @@ class TimeClock:
 
         self.selectedBtn = self.wTree.get_widget('btn_%sMode' % self.default_mode)
         self.selectedBtn.set_active(True)
-        self.save_timeout = None
 
         # Because PyGTK isn't reliably obeying Glade
         self.update_progressBars()
@@ -215,7 +215,6 @@ class TimeClock:
             self.selectedBtn = widget
 
         if self.selectedBtn.mode == SLEEP:
-            gobject.source_remove(self.save_timeout)
             self.doSave()
 
     def reset_clicked(self, widget):
@@ -275,7 +274,7 @@ class TimeClock:
             if self.used[mode] >= self.total[mode] and self.notify:
                 notify_exhaustion(mode)
 
-            if now >= (self.last_save + (5 * 60)):
+            if now >= (self.last_save + SAVE_INTERVAL):
                 self.doSave()
 
         self.last_tick = now

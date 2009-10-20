@@ -291,7 +291,7 @@ class TimeClock:
         self.last_save = time.time()
         return True
 
-if __name__ == '__main__':
+def main():
     from optparse import OptionParser
     parser = OptionParser(version="%%prog v%s" % __version__)
     #parser.add_option('-v', '--verbose', action="store_true", dest="verbose",
@@ -320,3 +320,6 @@ if __name__ == '__main__':
         gtk.main()
     except KeyboardInterrupt:
         sys.exit(0)
+
+if __name__ == '__main__':
+    main()

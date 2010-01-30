@@ -5,8 +5,6 @@ A simple application to help lazy procrastinators (me) to manage their time.
 See http://ssokolow.github.com/timeclock/ for a screenshot.
 
 @todo: Planned improvements:
- - I think PyNotify takes HTML as input. Confirm that I should be XML-escaping
-   ampersands and friends and then add it.
  - Clicking the preferences button while the dialog is shown shouldn't reset the
    unsaved preference changes.
  - Rework single-instance exclusion to ensure it's per-user. (Scope it the same
@@ -88,6 +86,7 @@ import gtkexcepthook
 
 try:
     import pynotify
+    from xml.sax.saxutils import escape as xmlescape
 except ImportError:
     have_pynotify = False
     notify_exhaustion = lambda timer_name: None
@@ -101,7 +100,7 @@ else:
         mode_name = MODE_NAMES[mode]
         notification = pynotify.Notification(
             "%s Time Exhausted" % mode_name.title(),
-            "You have used up your alotted time for %s" % mode_name.lower(),
+            "You have used up your alotted time for %s" % xmlescape(mode_name.lower()),
             os.path.join(SELF_DIR, "icons", "timeclock_48x48.png"))
         notification.set_urgency(pynotify.URGENCY_NORMAL)
         notification.set_timeout(pynotify.EXPIRES_NEVER)

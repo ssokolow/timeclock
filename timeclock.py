@@ -120,7 +120,8 @@ class SingleInstance:
     def __init__(self):
         import sys
         self.lockfile = os.path.normpath(tempfile.gettempdir() + '/' + os.path.basename(__file__) + '.lock')
-        if sys.platform == 'win32':
+        self.platform = sys.platform  # Avoid an AttributeError in __del__
+        if self.platform == 'win32':
                 try:
                         # file already exists, we try to remove (in case previous execution was interrupted)
                         if(os.path.exists(self.lockfile)):
@@ -142,7 +143,7 @@ class SingleInstance:
                         sys.exit(-1)
 
     def __del__(self):
-        if sys.platform == 'win32':
+        if self.platform == 'win32':
                 if hasattr(self, 'fd'):
                         os.close(self.fd)
                         os.unlink(self.lockfile)

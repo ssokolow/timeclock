@@ -9,6 +9,10 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
    ampersands and friends and then add it.
  - Clicking the preferences button while the dialog is shown shouldn't reset the
    unsaved preference changes.
+ - Rework single-instance exclusion to ensure it's per-user. (Scope it the same
+   as the DB)
+ - Extend the single-instance system to use D-Bus if available to raise/focus the
+   existing instance if one is already running.
  - Figure out some intuitive, non-distracting way to allow the user to make
    corrections. (eg. if you forget to set the timer to leisure before going AFK)
  - Should I offer preferences options for remembering window position and things
@@ -56,7 +60,7 @@ default_modes = {
     LEISURE : int(3600 * 5.5),
 }
 
-import logging, os, signal, sys, time, pickle
+import errno, logging, os, signal, sys, tempfile, time, pickle
 
 SELF_DIR = os.path.dirname(os.path.realpath(__file__))
 DATA_DIR = os.environ.get('XDG_DATA_HOME', os.path.expanduser('~/.local/share'))
@@ -111,6 +115,39 @@ else:
         if notification.last_shown + 900 < now:
             notification.last_shown = now
             notification.show()
+
+class SingleInstance:
+    """http://stackoverflow.com/questions/380870/python-single-instance-of-program/1265445#1265445"""
+    def __init__(self):
+        import sys
+        self.lockfile = os.path.normpath(tempfile.gettempdir() + '/' + os.path.basename(__file__) + '.lock')
+        if sys.platform == 'win32':
+                try:
+                        # file already exists, we try to remove (in case previous execution was interrupted)
+                        if(os.path.exists(self.lockfile)):
+                                os.unlink(self.lockfile)
+                        self.fd =  os.open(self.lockfile, os.O_CREAT|os.O_EXCL|os.O_RDWR)
+                except OSError, e:
+                        if e.errno == 13:
+                                print "Another instance is already running, quitting."
+                                sys.exit(-1)
+                        print e.errno
+                        raise
+        else: # non Windows
+                import fcntl, sys
+                self.fp = open(self.lockfile, 'w')
+                try:
+                        fcntl.lockf(self.fp, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                except IOError:
+                        print "Another instance is already running, quitting."
+                        sys.exit(-1)
+
+    def __del__(self):
+        if sys.platform == 'win32':
+                if hasattr(self, 'fd'):
+                        os.close(self.fd)
+                        os.unlink(self.lockfile)
+me = SingleInstance()
 
 CURRENT_SAVE_VERSION = 3 #: Used for save file versioning
 class TimeClock:

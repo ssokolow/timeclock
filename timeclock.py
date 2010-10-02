@@ -346,12 +346,12 @@ def main():
         opts.mode = "sleep"
     app = TimeClock(default_mode=opts.mode)
 
-    # Make sure that state is saved to disk on exit.
+    # Make sure that state is saved to disk on exit in a portable fashion.
     sys.exitfunc = app.doSave
-    signal.signal(signal.SIGTERM, lambda signum, stack_frame: sys.exit(0))
-    signal.signal(signal.SIGHUP, lambda signum, stack_frame: sys.exit(0))
-    signal.signal(signal.SIGQUIT, lambda signum, stack_frame: sys.exit(0))
-    signal.signal(signal.SIGINT, lambda signum, stack_frame: sys.exit(0))
+    for signame in ("SIGTERM", "SIGINT", "SIGHUP", "SIGQUIT"):
+        sigconst = getattr(signal, signame, None)
+        if sigconst:
+            signal.signal(sigconst, lambda signum, stack_frame: sys.exit(0))
 
     try:
         gtk.main()

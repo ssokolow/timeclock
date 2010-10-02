@@ -20,6 +20,8 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
  - Rework the design to minimize dependence on GTK+ (in case I switch to Qt for
    Phonon)
  - Report PyGTK's uncatchable xkill response on the bug tracker.
+ - Support overflow for timers (eg. When Daily Routine runs out, it starts
+   drawing from Leisure unless Leisure is also out)
 
 @todo: Notification TODO:
  - Provide a fallback for when libnotify notifications are unavailable.
@@ -31,10 +33,14 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
    - http://mail.python.org/pipermail/python-list/2006-October/582445.html
    - http://www.jonobacon.org/2006/08/28/getting-started-with-gstreamer-with-python/
  - Set up a callback for timer exhaustion.
+ - Handle popup notifications more intelligently (eg. Explicitly hide them when
+   switching away from an expired timer and explicitly show them when switching
+   to one)
 
 @todo: Consider:
  - Changing this into a Plasma widget (Without dropping PyGTK support)
  - Using PyKDE's bindings to the KDE Notification system (for the Plasma widget)
+ - Look into integrating with http://projecthamster.wordpress.com/
 
 @todo: Publish this on listing sites:
  - http://gtk-apps.org/
@@ -58,7 +64,7 @@ default_modes = {
     LEISURE : int(3600 * 5.5),
 }
 
-import errno, logging, os, signal, sys, tempfile, time, pickle
+import logging, os, signal, sys, tempfile, time, pickle
 
 SELF_DIR = os.path.dirname(os.path.realpath(__file__))
 DATA_DIR = os.environ.get('XDG_DATA_HOME', os.path.expanduser('~/.local/share'))
@@ -118,7 +124,7 @@ else:
 class SingleInstance:
     """http://stackoverflow.com/questions/380870/python-single-instance-of-program/1265445#1265445"""
     def __init__(self):
-        import sys
+        import sys as _sys    # Alias to please pyflakes
         self.lockfile = os.path.normpath(tempfile.gettempdir() + '/' + os.path.basename(__file__) + '.lock')
         self.platform = sys.platform  # Avoid an AttributeError in __del__
         if self.platform == 'win32':
@@ -130,17 +136,17 @@ class SingleInstance:
                 except OSError, e:
                         if e.errno == 13:
                                 print "Another instance is already running, quitting."
-                                sys.exit(-1)
+                                _sys.exit(-1)
                         print e.errno
                         raise
         else: # non Windows
-                import fcntl, sys
+                import fcntl
                 self.fp = open(self.lockfile, 'w')
                 try:
                         fcntl.lockf(self.fp, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 except IOError:
                         print "Another instance is already running, quitting."
-                        sys.exit(-1)
+                        _sys.exit(-1)
 
     def __del__(self):
         if self.platform == 'win32':

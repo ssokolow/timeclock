@@ -1,191 +1,11 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
-<!--Generated with glade3 3.4.5 on Sat Jul 18 15:45:13 2009 -->
+<?xml version="1.0"?>
 <glade-interface>
-  <widget class="GtkWindow" id="mainWin">
-    <property name="visible">True</property>
-    <property name="title" translatable="yes">Time Clock</property>
-    <property name="resizable">False</property>
-    <property name="window_position">GTK_WIN_POS_CENTER</property>
-    <property name="icon">icons/timeclock_48x48.png</property>
-    <signal name="destroy" handler="on_mainWin_destroy"/>
-    <child>
-      <widget class="GtkTable" id="mainWin_layout">
-        <property name="visible">True</property>
-        <property name="border_width">5</property>
-        <property name="n_rows">4</property>
-        <property name="n_columns">3</property>
-        <property name="column_spacing">5</property>
-        <property name="row_spacing">5</property>
-        <child>
-          <widget class="GtkRadioButton" id="btn_workMode">
-            <property name="visible">True</property>
-            <property name="can_focus">True</property>
-            <property name="label" translatable="yes">_Work</property>
-            <property name="use_underline">True</property>
-            <property name="response_id">0</property>
-            <property name="group">btn_sleepMode</property>
-            <signal name="toggled" handler="on_mode_toggled"/>
-          </widget>
-          <packing>
-            <property name="left_attach">1</property>
-            <property name="right_attach">2</property>
-            <property name="top_attach">1</property>
-            <property name="bottom_attach">2</property>
-            <property name="y_options">GTK_EXPAND</property>
-          </packing>
-        </child>
-        <child>
-          <widget class="GtkRadioButton" id="btn_leisureMode">
-            <property name="visible">True</property>
-            <property name="can_focus">True</property>
-            <property name="label" translatable="yes">_Leisure</property>
-            <property name="use_underline">True</property>
-            <property name="response_id">0</property>
-            <property name="active">True</property>
-            <property name="group">btn_sleepMode</property>
-            <signal name="toggled" handler="on_mode_toggled"/>
-          </widget>
-          <packing>
-            <property name="left_attach">2</property>
-            <property name="right_attach">3</property>
-            <property name="top_attach">1</property>
-            <property name="bottom_attach">2</property>
-            <property name="y_options">GTK_EXPAND</property>
-          </packing>
-        </child>
-        <child>
-          <widget class="GtkRadioButton" id="btn_overheadMode">
-            <property name="visible">True</property>
-            <property name="can_focus">True</property>
-            <property name="label" translatable="yes">_Daily Routine</property>
-            <property name="use_underline">True</property>
-            <property name="response_id">0</property>
-            <property name="active">True</property>
-            <property name="group">btn_sleepMode</property>
-            <signal name="toggled" handler="on_mode_toggled"/>
-          </widget>
-          <packing>
-            <property name="top_attach">1</property>
-            <property name="bottom_attach">2</property>
-            <property name="y_options">GTK_EXPAND</property>
-          </packing>
-        </child>
-        <child>
-          <widget class="GtkRadioButton" id="btn_sleepMode">
-            <property name="visible">True</property>
-            <property name="can_focus">True</property>
-            <property name="tooltip" translatable="yes">Pause all timers</property>
-            <property name="label" translatable="yes">_Asleep</property>
-            <property name="use_underline">True</property>
-            <property name="response_id">0</property>
-            <property name="active">True</property>
-            <signal name="toggled" handler="on_mode_toggled"/>
-          </widget>
-          <packing>
-            <property name="right_attach">2</property>
-            <property name="top_attach">3</property>
-            <property name="bottom_attach">4</property>
-            <property name="y_options">GTK_EXPAND</property>
-          </packing>
-        </child>
-        <child>
-          <widget class="GtkProgressBar" id="progress_workMode">
-            <property name="visible">True</property>
-            <property name="orientation">GTK_PROGRESS_RIGHT_TO_LEFT</property>
-          </widget>
-          <packing>
-            <property name="left_attach">1</property>
-            <property name="right_attach">2</property>
-            <property name="y_options">GTK_EXPAND</property>
-          </packing>
-        </child>
-        <child>
-          <widget class="GtkProgressBar" id="progress_leisureMode">
-            <property name="visible">True</property>
-            <property name="orientation">GTK_PROGRESS_RIGHT_TO_LEFT</property>
-          </widget>
-          <packing>
-            <property name="left_attach">2</property>
-            <property name="right_attach">3</property>
-            <property name="y_options">GTK_EXPAND</property>
-          </packing>
-        </child>
-        <child>
-          <widget class="GtkProgressBar" id="progress_overheadMode">
-            <property name="visible">True</property>
-            <property name="orientation">GTK_PROGRESS_RIGHT_TO_LEFT</property>
-          </widget>
-          <packing>
-            <property name="y_options">GTK_EXPAND</property>
-          </packing>
-        </child>
-        <child>
-          <widget class="GtkHSeparator" id="mainWin_hseparator">
-            <property name="visible">True</property>
-          </widget>
-          <packing>
-            <property name="right_attach">3</property>
-            <property name="top_attach">2</property>
-            <property name="bottom_attach">3</property>
-            <property name="y_padding">5</property>
-          </packing>
-        </child>
-        <child>
-          <widget class="GtkHBox" id="mainWin_prefs_reset_hbox">
-            <property name="visible">True</property>
-            <child>
-              <widget class="GtkButton" id="btn_prefs">
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="tooltip" translatable="yes">Preferences</property>
-                <property name="response_id">0</property>
-                <signal name="clicked" handler="on_prefs_clicked"/>
-                <child>
-                  <widget class="GtkImage" id="image1">
-                    <property name="visible">True</property>
-                    <property name="stock">gtk-preferences</property>
-                  </widget>
-                </child>
-              </widget>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">False</property>
-                <property name="padding">5</property>
-              </packing>
-            </child>
-            <child>
-              <widget class="GtkButton" id="btn_reset">
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="tooltip" translatable="yes">Reset all timers</property>
-                <property name="label" translatable="yes">_Reset</property>
-                <property name="use_underline">True</property>
-                <property name="response_id">0</property>
-                <signal name="clicked" handler="on_reset_clicked"/>
-              </widget>
-              <packing>
-                <property name="position">1</property>
-              </packing>
-            </child>
-          </widget>
-          <packing>
-            <property name="left_attach">2</property>
-            <property name="right_attach">3</property>
-            <property name="top_attach">3</property>
-            <property name="bottom_attach">4</property>
-            <property name="y_options">GTK_EXPAND</property>
-          </packing>
-        </child>
-      </widget>
-    </child>
-  </widget>
+  <!-- interface-requires gtk+ 2.12 -->
+  <!-- interface-naming-policy toplevel-contextual -->
   <widget class="GtkDialog" id="prefsDlg">
     <property name="border_width">5</property>
-    <property name="window_position">GTK_WIN_POS_CENTER_ON_PARENT</property>
-    <property name="type_hint">GDK_WINDOW_TYPE_HINT_DIALOG</property>
+    <property name="window_position">center-on-parent</property>
+    <property name="type_hint">dialog</property>
     <property name="has_separator">False</property>
     <child internal-child="vbox">
       <widget class="GtkVBox" id="dialog-vbox1">
@@ -248,7 +68,6 @@
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="xalign">1</property>
-                    <property name="adjustment">6 1 15 0.25 1 1</property>
                     <property name="digits">2</property>
                     <property name="numeric">True</property>
                   </widget>
@@ -266,7 +85,6 @@
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="xalign">1</property>
-                    <property name="adjustment">6 0 14 0.25 1 1</property>
                     <property name="digits">2</property>
                     <property name="numeric">True</property>
                   </widget>
@@ -327,7 +145,6 @@
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="xalign">1</property>
-                    <property name="adjustment">4 1 15 0.25 1 1</property>
                     <property name="digits">2</property>
                     <property name="numeric">True</property>
                   </widget>
@@ -348,24 +165,27 @@
                 <property name="use_underline">True</property>
               </widget>
               <packing>
-                <property name="type">tab</property>
                 <property name="tab_fill">False</property>
+                <property name="type">tab</property>
               </packing>
             </child>
             <child>
               <widget class="GtkTable" id="table2">
                 <property name="visible">True</property>
                 <property name="border_width">5</property>
-                <property name="n_rows">2</property>
+                <property name="n_rows">6</property>
+                <property name="n_columns">2</property>
+                <property name="row_spacing">1</property>
                 <child>
                   <widget class="GtkCheckButton" id="checkbutton_notify">
+                    <property name="label" translatable="yes">display notifications (Requires pynotify)</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
-                    <property name="label" translatable="yes">display notifications (Requires pynotify)</property>
-                    <property name="response_id">0</property>
+                    <property name="receives_default">False</property>
                     <property name="draw_indicator">True</property>
                   </widget>
                   <packing>
+                    <property name="right_attach">2</property>
                     <property name="top_attach">1</property>
                     <property name="bottom_attach">2</property>
                     <property name="y_options"></property>
@@ -378,8 +198,107 @@
                     <property name="label" translatable="yes">When a timer runs out...</property>
                   </widget>
                   <packing>
+                    <property name="right_attach">2</property>
                     <property name="y_options"></property>
                     <property name="y_padding">5</property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkCheckButton" id="checkbutton_sound">
+                    <property name="label" translatable="yes">play a sound (requires GStreamer)</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">False</property>
+                    <property name="draw_indicator">True</property>
+                  </widget>
+                  <packing>
+                    <property name="right_attach">2</property>
+                    <property name="top_attach">2</property>
+                    <property name="bottom_attach">3</property>
+                    <property name="x_options">GTK_FILL</property>
+                    <property name="y_options"></property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkFileChooserButton" id="filechooser_sound">
+                    <property name="visible">True</property>
+                    <property name="has_tooltip">True</property>
+                    <property name="tooltip" translatable="yes">Select a sound effect</property>
+                    <property name="title" translatable="yes">Select A Sound Effect</property>
+                    <property name="width_chars">20</property>
+                  </widget>
+                  <packing>
+                    <property name="left_attach">1</property>
+                    <property name="right_attach">2</property>
+                    <property name="top_attach">3</property>
+                    <property name="bottom_attach">4</property>
+                    <property name="y_options"></property>
+                    <property name="x_padding">5</property>
+                    <property name="y_padding">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkLabel" id="label_filler">
+                    <property name="visible">True</property>
+                  </widget>
+                  <packing>
+                    <property name="top_attach">3</property>
+                    <property name="bottom_attach">4</property>
+                    <property name="y_options">GTK_FILL</property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkHSeparator" id="hseparator1">
+                    <property name="visible">True</property>
+                  </widget>
+                  <packing>
+                    <property name="right_attach">2</property>
+                    <property name="top_attach">4</property>
+                    <property name="bottom_attach">5</property>
+                    <property name="y_options">GTK_FILL</property>
+                    <property name="y_padding">10</property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkHBox" id="hbox1">
+                    <property name="visible">True</property>
+                    <property name="spacing">5</property>
+                    <child>
+                      <widget class="GtkLabel" id="label2">
+                        <property name="visible">True</property>
+                        <property name="xalign">1</property>
+                        <property name="label" translatable="yes">Repeat notifications every</property>
+                      </widget>
+                      <packing>
+                        <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <widget class="GtkSpinButton" id="spinbutton1">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                      </widget>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <widget class="GtkLabel" id="label3">
+                        <property name="visible">True</property>
+                        <property name="xalign">0</property>
+                        <property name="label" translatable="yes">minutes</property>
+                      </widget>
+                      <packing>
+                        <property name="position">2</property>
+                      </packing>
+                    </child>
+                  </widget>
+                  <packing>
+                    <property name="right_attach">2</property>
+                    <property name="top_attach">5</property>
+                    <property name="bottom_attach">6</property>
+                    <property name="y_options">GTK_FILL</property>
                   </packing>
                 </child>
               </widget>
@@ -395,9 +314,9 @@
                 <property name="use_underline">True</property>
               </widget>
               <packing>
-                <property name="type">tab</property>
                 <property name="position">1</property>
                 <property name="tab_fill">False</property>
+                <property name="type">tab</property>
               </packing>
             </child>
           </widget>
@@ -408,36 +327,42 @@
         <child internal-child="action_area">
           <widget class="GtkHButtonBox" id="dialog-action_area1">
             <property name="visible">True</property>
-            <property name="layout_style">GTK_BUTTONBOX_END</property>
+            <property name="layout_style">end</property>
             <child>
               <widget class="GtkButton" id="btn_prefs_cancel">
+                <property name="label">gtk-cancel</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="label" translatable="yes">gtk-cancel</property>
                 <property name="use_stock">True</property>
-                <property name="response_id">0</property>
                 <signal name="clicked" handler="on_prefs_cancel"/>
               </widget>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">0</property>
+              </packing>
             </child>
             <child>
               <widget class="GtkButton" id="btn_prefs_ok">
+                <property name="label">gtk-ok</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="label" translatable="yes">gtk-ok</property>
                 <property name="use_stock">True</property>
-                <property name="response_id">0</property>
                 <signal name="clicked" handler="on_prefs_commit"/>
               </widget>
               <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
                 <property name="position">1</property>
               </packing>
             </child>
           </widget>
           <packing>
             <property name="expand">False</property>
-            <property name="pack_type">GTK_PACK_END</property>
+            <property name="pack_type">end</property>
+            <property name="position">0</property>
           </packing>
         </child>
       </widget>

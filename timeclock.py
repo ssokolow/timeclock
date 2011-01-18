@@ -88,7 +88,9 @@ except:
 
 import gtk, gobject
 import gtk.glade
+
 import gtkexcepthook
+gtkexcepthook.enable()
 
 try:
     import pynotify

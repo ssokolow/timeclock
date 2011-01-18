@@ -1,11 +1,18 @@
 """
 (c) 2003 Gustavo J A M Carneiro gjc at inescporto.pt
     2004-2005 Filip Van Raemdonck
-    2009 Stephan Sokolow
+    2009, 2011 Stephan Sokolow
 
 http://www.daa.com.au/pipermail/pygtk/2003-August/005775.html
 Message-ID: <1062087716.1196.5.camel@emperor.homelinux.net>
     "The license is whatever you want."
+
+Instructions: import gtkexcepthook; gtkexcepthook.enable()
+
+Changes from Van Raemdonck version:
+- Switched from auto-enable to gtkexcepthook.enable() to silence PyFlakes false
+  positives. (Borrowed naming convention from cgitb)
+- Split out traceback import to silence PyFlakes warning.
 
 @todo: Polish this up to meet my code formatting and clarity standards.
 @todo: Clean up the SMTP support. It's a mess.
@@ -16,7 +23,8 @@ Message-ID: <1062087716.1196.5.camel@emperor.homelinux.net>
 """
 
 
-import inspect, linecache, pydoc, sys, traceback
+import inspect, linecache, pydoc, sys
+#import traceback
 from cStringIO import StringIO
 from gettext import gettext as _
 from pprint import pformat
@@ -195,7 +203,8 @@ def _info(exctyp, value, tb):
 
     dialog.destroy()
 
-sys.excepthook = _info
+def enable():
+    sys.excepthook = _info
 
 if __name__ == '__main__':
     class X(object):

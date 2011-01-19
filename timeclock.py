@@ -5,7 +5,8 @@ A simple application to help lazy procrastinators (me) to manage their time.
 See http://ssokolow.github.com/timeclock/ for a screenshot.
 
 @todo: Planned improvements:
- - Set up a decent MVC-ish archtecture using GObject signals.
+ - Double-check that it still works on Python 2.4.
+ - Fixing setting up a decent MVC-ish archtecture using GObject signals.
    http://stackoverflow.com/questions/2057921/python-gtk-create-custom-signals
  - Clicking the preferences button while the dialog is shown shouldn't reset the
    unsaved preference changes.

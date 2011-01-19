@@ -296,10 +296,10 @@ class TimerModel(gobject.GObject):
         for name in self.timer_order:
             timers.append(self.timers[name])
 
-        #FIXME: Save to a temp file then atomic replace.
         pickle.dump( (CURRENT_SAVE_VERSION,
             timers, self.notify, window_state),
-                     open(SAVE_FILE, "w") )
+                     open(SAVE_FILE + '.tmp', "w") )
+        os.rename(SAVE_FILE + '.tmp', SAVE_FILE)
         self.last_save = time.time()
         return True
 
@@ -610,6 +610,8 @@ def main():
     MainWin(app.timer)
 
     #TODO: Split out the PyNotify parts into a separate view(?) module.
+    #TODO: Write up an audio notification view(?) module.
+    #TODO: Explore adding a "set urgent hint" call on the same interval as these.
 
     # Save state on exit
     sys.exitfunc = app.timer.save

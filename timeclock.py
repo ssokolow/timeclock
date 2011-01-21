@@ -170,7 +170,7 @@ class SingleInstance:
                         os.unlink(self.lockfile)
 me = SingleInstance()
 
-CURRENT_SAVE_VERSION = 5 #: Used for save file versioning
+CURRENT_SAVE_VERSION = 6 #: Used for save file versioning
 class TimerModel(gobject.GObject):
     """
     Model+Controller class which will be further divided as part of
@@ -230,9 +230,15 @@ class TimerModel(gobject.GObject):
             try:
                 # Load the data, but leave the internal state unchanged in case
                 # of corruption.
+                # FIXME: This shouldn't depend on CPython's refcounting.
                 loaded = pickle.load(open(SAVE_FILE))
                 version = loaded[0]
                 if version == CURRENT_SAVE_VERSION:
+                    version, data = loaded
+                    timers = data.get('timers', [])
+                    notify = data.get('window', {}).get('enable', True)
+                    win_state = data.get('window', {})
+                elif version == 5:
                     version, timers, notify, win_state = loaded
                 elif version == 4:
                     version, total, used, notify, win_state = loaded
@@ -297,9 +303,15 @@ class TimerModel(gobject.GObject):
         for name in self.timer_order:
             timers.append(self.timers[name])
 
-        pickle.dump( (CURRENT_SAVE_VERSION,
-            timers, self.notify, window_state),
-                     open(SAVE_FILE + '.tmp', "w") )
+        data = {
+            'timers': timers,
+            'notify': {'enable': self.notify},
+            'window': window_state,
+        }
+
+        #FIXME: This shouldn't depend on CPython's refcounting.
+        pickle.dump( (CURRENT_SAVE_VERSION, data),
+            open(SAVE_FILE + '.tmp', "w") )
         os.rename(SAVE_FILE + '.tmp', SAVE_FILE)
         self.last_save = time.time()
         return True

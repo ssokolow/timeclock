@@ -230,8 +230,12 @@ class TimerModel(gobject.GObject):
             try:
                 # Load the data, but leave the internal state unchanged in case
                 # of corruption.
-                # FIXME: This shouldn't depend on CPython's refcounting.
-                loaded = pickle.load(open(SAVE_FILE))
+
+                # Don't rely on CPython's refcounting or Python 2.5's "with"
+                fh = open(SAVE_FILE, 'rb')
+                loaded = pickle.load(fh)
+                fh.close()
+
                 version = loaded[0]
                 if version == CURRENT_SAVE_VERSION:
                     version, data = loaded
@@ -309,9 +313,12 @@ class TimerModel(gobject.GObject):
             'window': window_state,
         }
 
-        #FIXME: This shouldn't depend on CPython's refcounting.
-        pickle.dump( (CURRENT_SAVE_VERSION, data),
-            open(SAVE_FILE + '.tmp', "w") )
+        # Don't rely on CPython's refcounting or Python 2.5's "with"
+        fh = open(SAVE_FILE + '.tmp', "wb")
+        pickle.dump( (CURRENT_SAVE_VERSION, data), fh)
+        fh.close()
+
+        # Corruption from saving without atomic replace has been observed
         os.rename(SAVE_FILE + '.tmp', SAVE_FILE)
         self.last_save = time.time()
         return True

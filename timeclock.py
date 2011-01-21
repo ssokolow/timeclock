@@ -5,6 +5,7 @@ A simple application to help lazy procrastinators (me) to manage their time.
 See http://ssokolow.github.com/timeclock/ for a screenshot.
 
 @todo: Planned improvements:
+ - Decide how overflow should behave if the target timer is out too.
  - Double-check that it still works on Python 2.4.
  - Fixing setting up a decent MVC-ish archtecture using GObject signals.
    http://stackoverflow.com/questions/2057921/python-gtk-create-custom-signals
@@ -23,8 +24,6 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
  - Rework the design to minimize dependence on GTK+ (in case I switch to Qt for
    Phonon)
  - Report PyGTK's uncatchable xkill response on the bug tracker.
- - Support overflow for timers (eg. When Daily Routine runs out, it starts
-   drawing from Leisure unless Leisure is also out)
 
 @todo: Notification TODO:
  - Provide a fallback for when libnotify notifications are unavailable.
@@ -61,7 +60,8 @@ default_timers = [
     {
         'name' : 'Overhead',
         'total': int(3600 * 3.5),
-        'used' : 0
+        'used' : 0,
+        'overflow': 'Leisure'
     },
     {
         'name' : 'Work',
@@ -244,6 +244,11 @@ class TimerModel(gobject.GObject):
                     win_state = data.get('window', {})
                 elif version == 5:
                     version, timers, notify, win_state = loaded
+
+                    # Upgrade legacy configs with overflow
+                    _ohead = [x for x in timers if x['name'] == 'Overhead']
+                    if _ohead and not _ohead.get('overflow'):
+                        _ohead['overflow'] =  'Leisure'
                 elif version == 4:
                     version, total, used, notify, win_state = loaded
                 elif version == 3:
@@ -293,6 +298,10 @@ class TimerModel(gobject.GObject):
             self.timers = dict((x['name'], x) for x in timers)
             self.emit('tick')
 
+    def remaining(self, mode=None):
+        mode = mode or self.mode
+        return self.mode['total'] - self.mode['used']
+
     def save(self):
         """Exit/Timeout handler for the app. Gets called every five minutes and
         on every type of clean exit except xkill. (PyGTK doesn't let you)
@@ -338,10 +347,28 @@ class TimerModel(gobject.GObject):
         now = time.time()
         if self.mode:
             self.mode['used'] += (now - self.last_tick)
-            self.emit('tick')
 
-            if self.mode['used'] >= self.mode['total'] and self.notify:
-                self.notify_exhaustion(self.mode)
+            if self.remaining() < 0:
+                overtime = abs(self.remaining())
+                overflow_to = self.timers.get(self.mode.get('overflow'))
+                if overflow_to:
+                    # TODO: Probably best to rethink to allow accurate
+                    # record-keeping. (Maybe an additional field to track
+                    # overflowed time so I can drain "total" rather than "used"
+                    # without messing up stored settings)
+                    overflow_to['used'] += overtime
+                    # This works because overtime keeps getting reset to zero.
+
+                #TODO: This should be more elegant (Probably make modes objects)
+                if self.notify and overflow_to and self.remaining(overflow_to) < 0:
+                    self.notify_exhaustion(overflow_to)
+                else:
+                    self.notify_exhaustion(self.mode)
+
+                if overflow_to:
+                    self.mode['used'] = self.mode['total']
+
+            self.emit('tick')
 
             if now >= (self.last_save + SAVE_INTERVAL):
                 self.save()
@@ -444,6 +471,9 @@ class MainWin(gtk.Window):
             if name: # Exclude "Asleep"
                 self.btns[name].update_label()
         if self.timer.mode:
+            #FIXME: Not helpful when overflow kicks in. Rethink.
+            # (Maybe fixable with my "don't actually make overflow reset the
+            # active timer" change for record-keeping.)
             self.set_title(self.btns[self.timer.mode['name']].get_text())
         else:
             self.set_title("Timeclock Paused")

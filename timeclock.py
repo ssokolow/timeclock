@@ -177,8 +177,8 @@ class TimerModel(gobject.GObject):
     re-architecting timeclock to be a properly modular MVC application.
     """
     __gsignals__ = {
-            'mode-changed': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (str, )),
-            'tick': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, ())
+        'mode-changed': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (str, )),
+        'tick': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (str, float))
     }
 
     def __init__(self, app, start_mode=None):
@@ -221,7 +221,7 @@ class TimerModel(gobject.GObject):
         """Reset all timers to starting values"""
         for name in self.timers:
             self.timers[name]['used'] = 0
-            self.emit('tick')
+            self.emit('tick', None, 0)
         self.set_active(None)
 
     def load(self):
@@ -296,11 +296,11 @@ class TimerModel(gobject.GObject):
 
             self.timer_order = [x['name'] for x in timers]
             self.timers = dict((x['name'], x) for x in timers)
-            self.emit('tick')
+            self.emit('tick', None, 0)
 
     def remaining(self, mode=None):
         mode = mode or self.mode
-        return self.mode['total'] - self.mode['used']
+        return mode['total'] - mode['used']
 
     def save(self):
         """Exit/Timeout handler for the app. Gets called every five minutes and
@@ -346,7 +346,8 @@ class TimerModel(gobject.GObject):
         """
         now = time.time()
         if self.mode:
-            self.mode['used'] += (now - self.last_tick)
+            delta = now - self.last_tick
+            self.mode['used'] += delta
 
             if self.remaining() < 0:
                 overtime = abs(self.remaining())
@@ -368,7 +369,10 @@ class TimerModel(gobject.GObject):
                 if overflow_to:
                     self.mode['used'] = self.mode['total']
 
-            self.emit('tick')
+                self.emit('tick', overflow_to['name'], overtime)
+
+            #TODO: Rework overtime calculation so this is proper.
+            self.emit('tick', self.mode['name'], delta)
 
             if now >= (self.last_save + SAVE_INTERVAL):
                 self.save()
@@ -465,8 +469,11 @@ class MainWin(gtk.Window):
         if not widget.mode:
             self.timer.save()
 
-    def update(self, timer):
-        """Common code used for initializing and updating the progress bars."""
+    def update(self, timer, mode=None, delta=None):
+        """Common code used for initializing and updating the progress bars.
+
+        :todo: Actually use the mode and delta passed in.
+        """
         for name in self.btns:
             if name: # Exclude "Asleep"
                 self.btns[name].update_label()
@@ -573,8 +580,11 @@ class TimeClock(object):
             widget.set_property('draw-indicator', False)
         sleepBtn.set_property('draw-indicator', False)
 
-    def update_progressBars(self, timer=None, now=None):
-        """Common code used for initializing and updating the progress bars."""
+    def update_progressBars(self, timer=None, mode=None, delta=None):
+        """Common code used for initializing and updating the progress bars.
+
+        :todo: Actually use the values passed in by the emit() call.
+        """
         for widget in self.timer_widgets:
             timer = self.timer.timers[widget.mode]
             pbar = self.timer_widgets[widget]

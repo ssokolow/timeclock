@@ -5,6 +5,9 @@ A simple application to help lazy procrastinators (me) to manage their time.
 See http://ssokolow.github.com/timeclock/ for a screenshot.
 
 @todo: Planned improvements:
+ - Split "mode" into "selected" and "active" for a generalized version of the
+   (pressed button vs. title displayed in taskbar) distinction.
+ - Make my API for getters and setters use property() instead.
  - Decide how overflow should behave if the target timer is out too.
  - Double-check that it still works on Python 2.4.
  - Fixing setting up a decent MVC-ish archtecture using GObject signals.
@@ -24,6 +27,15 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
  - Rework the design to minimize dependence on GTK+ (in case I switch to Qt for
    Phonon)
  - Report PyGTK's uncatchable xkill response on the bug tracker.
+ - Explore how progress bars behave when their base colors are changed:
+   (http://hg.atheme.org/audacious/audacious-plugins/diff/a25b618e8f4a/src/gtkui/ui_playlist_widget.c)
+
+@todo: Optionally use idle detection to auto-trigger Overhead on wake
+ - http://www.xfree86.org/current/Xss.3.html (xpyb. python-xlib has no XSS ext. wrapper)
+   - Poll with xcb.get_file_descriptor and GTK's select handler.
+ - http://msdn.microsoft.com/en-us/library/ms646302.aspx (pywin32?)
+ - http://stackoverflow.com/questions/608710/monitoring-user-idle-time
+ - Probably a good idea to write and share a wrapper
 
 @todo: Notification TODO:
  - Provide a fallback for when libnotify notifications are unavailable.
@@ -87,6 +99,7 @@ if not os.path.isdir(DATA_DIR):
                                % DATA_DIR)
 SAVE_FILE = os.path.join(DATA_DIR, "timeclock.sav")
 SAVE_INTERVAL = 60 * 5  # 5 Minutes
+NOTIFY_INTERVAL = 60 * 15 # 15 Minutes
 file_exists = os.path.isfile
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
@@ -170,12 +183,11 @@ class SingleInstance:
                         os.unlink(self.lockfile)
 me = SingleInstance()
 
+#{ Model stuff
+
 CURRENT_SAVE_VERSION = 6 #: Used for save file versioning
 class TimerModel(gobject.GObject):
-    """
-    Model+Controller class which will be further divided as part of
-    re-architecting timeclock to be a properly modular MVC application.
-    """
+    """Model class which still needs more refactoring."""
     __gsignals__ = {
         'mode-changed': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (str, )),
         'tick': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (str, float))
@@ -184,7 +196,6 @@ class TimerModel(gobject.GObject):
     def __init__(self, app, start_mode=None):
         self.__gobject_init__()
 
-        self.last_tick = time.time()
         self.last_save = 0
 
         self.notify = True
@@ -192,30 +203,8 @@ class TimerModel(gobject.GObject):
         self.timers = dict((x['name'], x) for x in default_timers)
         self.mode = self.timers.get(start_mode, None)
 
-        # Make the notifications in advance,
-        if have_pynotify:
-            self.notifications = {}
-            for mode in self.timers:
-                notification = pynotify.Notification(
-                    "%s Time Exhausted" % mode,
-                    "You have used up your alotted time for %s" % xmlescape(mode.lower()),
-                    get_icon_path(48))
-                notification.set_urgency(pynotify.URGENCY_NORMAL)
-                notification.set_timeout(pynotify.EXPIRES_NEVER)
-                notification.last_shown = 0
-                self.notifications[mode] = notification
-
         #TODO: Remove the back-reference to the app ASAP.
         self.app = app
-
-    def notify_exhaustion(self, mode):
-        """Display a libnotify notification that the given timer has expired."""
-        if have_pynotify:
-            notification = self.notifications[mode['name']]
-            now = time.time()
-            if notification.last_shown + 900 < now:
-                notification.last_shown = now
-                notification.show()
 
     def reset(self):
         """Reset all timers to starting values"""
@@ -332,11 +321,25 @@ class TimerModel(gobject.GObject):
         self.last_save = time.time()
         return True
 
+    def get_active(self):
+        return self.mode
+
     def set_active(self, name):
         #XXX: Decide how to properly handle the Asleep case.
         self.mode = self.timers.get(name, None)
         self.emit('mode-changed', name)
         #TODO: Actually listen on this signal.
+
+#{ Controller Modules
+
+class TimerController(gobject.GObject):
+    """The default timer behaviour for the timeclock."""
+    def __init__(self, model):
+        self.__gobject_init__()
+
+        self.model = model
+        self.last_tick = time.time()
+        gobject.timeout_add(1000, self.tick)
 
     def tick(self):
         """Callback for updating progress bars.
@@ -344,14 +347,14 @@ class TimerModel(gobject.GObject):
         :note: Emitted 'tick' signal is not exclusively for incrementing the
         the clock display. Examine how much time has actually elapsed.
         """
-        now = time.time()
-        if self.mode:
+        now, mode = time.time(), self.model.get_active()
+        if mode:
             delta = now - self.last_tick
-            self.mode['used'] += delta
+            self.model.mode['used'] += delta
 
-            if self.remaining() < 0:
-                overtime = abs(self.remaining())
-                overflow_to = self.timers.get(self.mode.get('overflow'))
+            if self.model.remaining() < 0:
+                overtime = abs(self.model.remaining())
+                overflow_to = self.model.timers.get(self.model.mode.get('overflow'))
                 if overflow_to:
                     # TODO: Probably best to rethink to allow accurate
                     # record-keeping. (Maybe an additional field to track
@@ -360,26 +363,83 @@ class TimerModel(gobject.GObject):
                     overflow_to['used'] += overtime
                     # This works because overtime keeps getting reset to zero.
 
-                #TODO: This should be more elegant (Probably make modes objects)
-                if self.notify and overflow_to and self.remaining(overflow_to) < 0:
-                    self.notify_exhaustion(overflow_to)
-                else:
-                    self.notify_exhaustion(self.mode)
-
                 if overflow_to:
-                    self.mode['used'] = self.mode['total']
+                    self.model.mode['used'] = self.model.mode['total']
 
-                self.emit('tick', overflow_to['name'], overtime)
+                self.model.emit('tick', overflow_to['name'], overtime)
 
             #TODO: Rework overtime calculation so this is proper.
-            self.emit('tick', self.mode['name'], delta)
+            self.model.emit('tick', self.model.mode['name'], delta)
 
-            if now >= (self.last_save + SAVE_INTERVAL):
-                self.save()
+            if now >= (self.model.last_save + SAVE_INTERVAL):
+                self.model.save()
 
         self.last_tick = now
-
         return True
+
+
+class IdleController(gobject.GObject):
+    """A controller to set and unset Asleep automatically."""
+    def __init__(self, model):
+        self.__gobject_init__()
+        pass #TODO: Implement
+
+#{ Notification Modules
+
+class LibNotifyNotifier(gobject.GObject):
+    """A timer expiry notification view based on libnotify.
+
+    :todo: Redesign this on an abstraction over Growl, libnotify, and toasts.
+    """
+    def __init__(self, model):
+        self.__gobject_init__()
+
+        self.last_notified = 0
+
+        if have_pynotify:
+            # Make the notifications in advance,
+            self.notifications = {}
+            for mode in model.timers:
+                notification = pynotify.Notification(
+                    "%s Time Exhausted" % mode,
+                    "You have used all allotted time for %s" % xmlescape(mode.lower()),
+                    get_icon_path(48))
+                notification.set_urgency(pynotify.URGENCY_NORMAL)
+                notification.set_timeout(pynotify.EXPIRES_NEVER)
+                notification.last_shown = 0
+                self.notifications[mode] = notification
+
+            model.connect('tick', self.tick)
+
+    def tick(self, model, mode, delta):
+        #TODO: This should be more elegant (Probably make modes objects)
+        if model.remaining() >= 0:
+            return
+        else:
+            overflow_to = model.timers.get(model.mode.get('overflow'))
+            if overflow_to and model.remaining(overflow_to) < 0:
+                self.notify_exhaustion(overflow_to)
+            elif model.remaining() < 0:
+                self.notify_exhaustion(model.mode)
+
+    def notify_exhaustion(self, mode):
+        """Display a libnotify notification that the given timer has expired."""
+        #TODO: Probably more elegant to put the time check in tick()
+        notification = self.notifications[mode['name']]
+        now = time.time()
+        if notification.last_shown + 900 < now:
+            notification.last_shown = now
+            notification.show()
+
+
+#TODO: Implement this.
+class AudioNotifier(gobject.GObject):
+    """An auditory timer expiry notification based on a portability layer."""
+    def __init__(self, model):
+        self.__gobject_init__()
+        pass #TODO: Implement
+
+#{ UI Components
 
 class ModeButton(gtk.RadioButton):
     def __init__(self, model, group=None, *args, **kwargs):
@@ -512,6 +572,8 @@ class MainWin(gtk.Window):
 
         return True
 
+#}
+
 class TimeClock(object):
     selectedBtn = None
 
@@ -538,7 +600,6 @@ class TimeClock(object):
                  "on_prefs_cancel"    : self.prefs_cancel }
         self.mTree.signal_autoconnect(mDic)
         self.pTree.signal_autoconnect(pDic)
-        gobject.timeout_add(1000, self.timer.tick)
 
         # -- Restore saved window state when possible --
 
@@ -668,6 +729,8 @@ def main():
     #    opts.mode = None
     app = TimeClock(start_mode=opts.mode)
     MainWin(app.timer)
+    LibNotifyNotifier(app.timer)
+    TimerController(app.timer)
 
     #TODO: Split out the PyNotify parts into a separate view(?) module.
     #TODO: Write up an audio notification view(?) module.

@@ -369,8 +369,7 @@ class TimerController(gobject.GObject):
 
                 if overflow_to:
                     self.model.mode['used'] = self.model.mode['total']
-
-                self.model.emit('tick', overflow_to['name'], overtime)
+                    self.model.emit('tick', overflow_to['name'], overtime)
 
             #TODO: Rework overtime calculation so this is proper.
             self.model.emit('tick', self.model.mode['name'], delta)

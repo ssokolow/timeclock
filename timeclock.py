@@ -117,7 +117,6 @@ import gtk, gobject
 import gtk.glade
 
 import gtkexcepthook
-gtkexcepthook.enable()
 
 def get_icon_path(size):
     return os.path.join(SELF_DIR, "icons", "timeclock_%dx%d.png" % (size, size))
@@ -181,7 +180,6 @@ class SingleInstance:
                 if hasattr(self, 'fd'):
                         os.close(self.fd)
                         os.unlink(self.lockfile)
-me = SingleInstance()
 
 #{ Model stuff
 
@@ -713,6 +711,9 @@ class TimeClock(object):
         self.pTree.get_widget('prefsDlg').hide()
 
 def main():
+    me = SingleInstance()
+    gtkexcepthook.enable()
+
     from optparse import OptionParser
     parser = OptionParser(version="%%prog v%s" % __version__)
     parser.add_option('-m', '--initial-mode',

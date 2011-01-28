@@ -14,8 +14,6 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
    http://stackoverflow.com/questions/2057921/python-gtk-create-custom-signals
  - Clicking the preferences button while the dialog is shown shouldn't reset the
    unsaved preference changes.
- - Rework single-instance exclusion to ensure it's per-user. (Scope it the same
-   as the DB)
  - Extend the single-instance system to use D-Bus if available to raise/focus the
    existing instance if one is already running.
  - Figure out some intuitive, non-distracting way to allow the user to make
@@ -138,11 +136,31 @@ else:
 
 class SingleInstance:
     """http://stackoverflow.com/questions/380870/python-single-instance-of-program/1265445#1265445"""
-    def __init__(self):
+    def __init__(self, useronly=True, lockfile=None):
+        """
+        :param useronly: Allow one instance per user rather than one instance overall.
+            (On Windows, this is always True)
+        """
         import sys as _sys    # Alias to please pyflakes
-        self.lockfile = os.path.normpath(tempfile.gettempdir() + '/' + os.path.basename(__file__) + '.lock')
-        self.platform = sys.platform  # Avoid an AttributeError in __del__
-        if self.platform == 'win32':
+        self.platform = _sys.platform  # Avoid an AttributeError in __del__
+
+        if lockfile:
+            self.lockfile = lockfile
+        else:
+            fname = os.path.basename(__file__) + '.lock'
+            if self.platform == 'win32' or not useronly:
+                # According to TechNet, TEMP/TMP are already user-scoped.
+                self.lockfile = os.path.join(tempfile.gettempdir(), fname)
+            else:
+                base = os.environ.get('XDG_CACHE_HOME', os.path.expanduser('~/.cache'))
+                self.lockfile = os.path.join(base, fname)
+
+                if not os.path.exists(base):
+                    os.makedirs(base)
+
+        self.lockfile = os.path.normpath(os.path.normcase(self.lockfile))
+
+        if self.platform == 'win32': #TODO: What about Win64? os.name == 'nt'?
                 try:
                         # file already exists, we try to remove (in case previous execution was interrupted)
                         if(os.path.exists(self.lockfile)):

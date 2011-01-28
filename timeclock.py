@@ -43,9 +43,6 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
  - Offer to turn the timer text a user-specified color (default: red) when it
    goes into negative values.
  - Finish the preferences page.
- - Add optional sound effects for timer completion using gst-python or PyGame:
-   - http://mail.python.org/pipermail/python-list/2006-October/582445.html
-   - http://www.jonobacon.org/2006/08/28/getting-started-with-gstreamer-with-python/
  - Set up a callback for timer exhaustion.
  - Handle popup notifications more intelligently (eg. Explicitly hide them when
    switching away from an expired timer and explicitly show them when switching
@@ -100,6 +97,7 @@ if not os.path.isdir(DATA_DIR):
 SAVE_FILE = os.path.join(DATA_DIR, "timeclock.sav")
 SAVE_INTERVAL = 60 * 5  # 5 Minutes
 NOTIFY_INTERVAL = 60 * 15 # 15 Minutes
+NOTIFY_SOUND = '49213__tombola__Fisher_Price29.wav'
 file_exists = os.path.isfile
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
@@ -132,21 +130,11 @@ else:
 
 try:
     import gst
+    import urllib
 except ImportError:
     have_gstreamer = False
 else:
     have_gstreamer = True
-    # TODO: Complete GStreamer support.
-    #uri = "file:///usr/share/sounds/KDE-Im-Nudge.ogg"
-    #bin = gst.element_factory_make("playbin")
-    #bin.set_property("uri", uri)
-    #bin.set_state(gst.STATE_NULL)
-    #bin.set_state(gst.STATE_PLAYING)
-
-#TODO: Fall back to using winsound or wave and ossaudiodev
-#TODO: Look into writing a generic wrapper which also tries things like these:
-# - http://stackoverflow.com/questions/276266/whats-a-cross-platform-way-to-play-a-sound-file-in-python
-# - http://stackoverflow.com/questions/307305/play-a-sound-with-python
 
 class SingleInstance:
     """http://stackoverflow.com/questions/380870/python-single-instance-of-program/1265445#1265445"""
@@ -435,7 +423,31 @@ class AudioNotifier(gobject.GObject):
     """An auditory timer expiry notification based on a portability layer."""
     def __init__(self, model):
         self.__gobject_init__()
-        pass #TODO: Implement
+
+        self.last_notified = 0
+        self.uri = NOTIFY_SOUND
+
+        if have_gstreamer:
+            if os.path.exists(self.uri):
+                self.uri = 'file://' + urllib.pathname2url(os.path.abspath(self.uri))
+            self.bin = gst.element_factory_make("playbin")
+            self.bin.set_property("uri", self.uri)
+
+            if model:
+                model.connect('tick', self.tick)
+
+            #TODO: Fall back to using winsound or wave and ossaudiodev or maybe pygame
+            #TODO: Design a generic wrapper which also tries things like these:
+            # - http://stackoverflow.com/questions/276266/whats-a-cross-platform-way-to-play-a-sound-file-in-python
+            # - http://stackoverflow.com/questions/307305/play-a-sound-with-python
+
+    def tick(self, model, mode, delta):
+        now = time.time()
+        if model.remaining() <= 0 and self.last_notified + 900 < now:
+            #TODO: Did I really need to do this?
+            self.bin.set_state(gst.STATE_NULL)
+            self.bin.set_state(gst.STATE_PLAYING)
+            self.last_notified = now
 
 #{ UI Components
 
@@ -731,6 +743,7 @@ def main():
     app = TimeClock(start_mode=opts.mode)
     MainWin(app.timer)
     LibNotifyNotifier(app.timer)
+    AudioNotifier(app.timer)
     TimerController(app.timer)
 
     #TODO: Split out the PyNotify parts into a separate view(?) module.

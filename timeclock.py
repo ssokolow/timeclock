@@ -399,13 +399,13 @@ class LibNotifyNotifier(gobject.GObject):
 
     def tick(self, model, mode, delta):
         #TODO: This should be more elegant (Probably make modes objects)
-        if model.remaining() >= 0:
+        if model.remaining() > 0:
             return
         else:
             overflow_to = model.timers.get(model.mode.get('overflow'))
-            if overflow_to and model.remaining(overflow_to) < 0:
+            if overflow_to and model.remaining(overflow_to) <= 0:
                 self.notify_exhaustion(overflow_to)
-            elif model.remaining() < 0:
+            elif model.remaining() <= 0:
                 self.notify_exhaustion(model.mode)
 
     def notify_exhaustion(self, mode):

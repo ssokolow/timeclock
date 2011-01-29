@@ -95,7 +95,7 @@ if not os.path.isdir(DATA_DIR):
 SAVE_FILE = os.path.join(DATA_DIR, "timeclock.sav")
 SAVE_INTERVAL = 60 * 5  # 5 Minutes
 NOTIFY_INTERVAL = 60 * 15 # 15 Minutes
-NOTIFY_SOUND = '49213__tombola__Fisher_Price29.wav'
+NOTIFY_SOUND = os.path.join(os.path.dirname(os.path.realpath(__file__)), '49213__tombola__Fisher_Price29.wav')
 file_exists = os.path.isfile
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')

@@ -495,6 +495,24 @@ class ModeButton(gtk.RadioButton):
         self.progress.set_text('%s: %s' % (self.model['name'], ptime))
         self.progress.set_fraction(max(float(remaining) / self.model['total'], 0))
 
+class MainWinContextMenu(gtk.Menu):
+    def __init__(self, model, *args, **kwargs):
+        gtk.Menu.__init__(self, *args, **kwargs)
+        self.model = model
+
+        asleep = gtk.RadioMenuItem(None, "_Asleep")
+        reset = gtk.MenuItem("_Reset...")
+        sep = gtk.SeparatorMenuItem()
+        prefs = gtk.MenuItem("_Preferences...")
+        quit = gtk.ImageMenuItem(stock_id="gtk-quit")
+
+        self.append(asleep)
+        self.append(reset)
+        self.append(sep)
+        self.append(prefs)
+        self.append(quit)
+
+        #TODO: Hook in click bindings.
 
 class MainWin(gtk.Window):
     def __init__(self, timer):
@@ -505,6 +523,7 @@ class MainWin(gtk.Window):
         self.evbox = gtk.EventBox()
         self.box = gtk.HBox()
         self.btnbox = gtk.HButtonBox()
+        self.menu = MainWinContextMenu(timer)
 
         self.btns = {}
         for name in self.timer.timer_order:
@@ -546,6 +565,7 @@ class MainWin(gtk.Window):
         #self.evbox.connect('popup-menu', self.showMenu)
 
         self.update(self.timer)
+        self.menu.show_all() #TODO: Is this line necessary?
         self.show_all()
 
     def mode_changed(self, widget):
@@ -581,21 +601,7 @@ class MainWin(gtk.Window):
         else:
             evtBtn, evtTime = None, None
 
-        menu = gtk.Menu()
-
-        asleep = gtk.RadioMenuItem(None, "_Asleep")
-        reset = gtk.MenuItem("_Reset...")
-        sep = gtk.SeparatorMenuItem()
-        prefs = gtk.MenuItem("_Preferences...")
-        quit = gtk.ImageMenuItem(stock_id="gtk-quit")
-        menu.append(asleep)
-        menu.append(reset)
-        menu.append(sep)
-        menu.append(prefs)
-        menu.append(quit)
-
-        menu.show_all()
-        menu.popup(None, None, None, 3, evtTime)
+        self.menu.popup(None, None, None, 3, evtTime)
 
         return True
 

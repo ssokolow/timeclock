@@ -136,10 +136,16 @@ else:
 
 class SingleInstance:
     """http://stackoverflow.com/questions/380870/python-single-instance-of-program/1265445#1265445"""
-    def __init__(self, useronly=True, lockfile=None):
+    def __init__(self, useronly=True, lockfile=None, lockname=None):
         """
         :param useronly: Allow one instance per user rather than one instance overall.
             (On Windows, this is always True)
+        :param lockfile: Specify an explicit path for the lockfile.
+        :param lockname: Specify a filename to be used for the lockfile when
+            ``lockfile`` is ``None``. The usual location selection algorithms
+            and ``.lock`` extension will apply.
+
+        :note: ``lockname`` assumes it is being given a valid filename.
         """
         import sys as _sys    # Alias to please pyflakes
         self.platform = _sys.platform  # Avoid an AttributeError in __del__
@@ -147,7 +153,10 @@ class SingleInstance:
         if lockfile:
             self.lockfile = lockfile
         else:
-            fname = os.path.basename(__file__) + '.lock'
+            if lockname:
+                fname = lockname + '.lock'
+            else:
+                fname = os.path.basename(__file__) + '.lock'
             if self.platform == 'win32' or not useronly:
                 # According to TechNet, TEMP/TMP are already user-scoped.
                 self.lockfile = os.path.join(tempfile.gettempdir(), fname)
@@ -197,18 +206,16 @@ class TimerModel(gobject.GObject):
         'tick': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (str, float))
     }
 
-    def __init__(self, app, start_mode=None):
+    def __init__(self, start_mode=None, save_file=SAVE_FILE):
         self.__gobject_init__()
 
         self.last_save = 0
+        self.save_file = save_file
 
         self.notify = True
         self.timer_order = [x['name'] for x in default_timers]
         self.timers = dict((x['name'], x) for x in default_timers)
         self.mode = self.timers.get(start_mode, None)
-
-        #TODO: Remove the back-reference to the app ASAP.
-        self.app = app
 
     def reset(self):
         """Reset all timers to starting values"""
@@ -219,13 +226,13 @@ class TimerModel(gobject.GObject):
 
     def load(self):
         """Load the save file if present. Log and start clean otherwise."""
-        if file_exists(SAVE_FILE):
+        if file_exists(self.save_file):
             try:
                 # Load the data, but leave the internal state unchanged in case
                 # of corruption.
 
                 # Don't rely on CPython's refcounting or Python 2.5's "with"
-                fh = open(SAVE_FILE, 'rb')
+                fh = open(self.save_file, 'rb')
                 loaded = pickle.load(fh)
                 fh.close()
 
@@ -246,11 +253,11 @@ class TimerModel(gobject.GObject):
                     version, total, used, notify, win_state = loaded
                 elif version == 3:
                     version, total, used, notify = loaded
-                    win_state = {}
+                    #win_state = {}
                 elif version == 2:
                     version, total, used = loaded
                     notify = True
-                    win_state = {}
+                    #win_state = {}
                 elif version == 1:
                     version, total_old, used_old = loaded
                     translate = ["N/A", "btn_overheadMode", "btn_workMode",
@@ -260,7 +267,7 @@ class TimerModel(gobject.GObject):
                     used = dict( (translate.index(key), value)
                                  for key, value in used_old.items() )
                     notify = True
-                    win_state = {}
+                    #win_state = {}
                 else:
                     raise ValueError("Save file too new! (Expected %s, got %s)" % (CURRENT_SAVE_VERSION, version))
 
@@ -284,7 +291,7 @@ class TimerModel(gobject.GObject):
             else:
                 # File loaded successfully, now we put the data in place.
                 self.notify = notify
-                self.app.saved_state = win_state
+                #self.app.saved_state = win_state
                 #FIXME: Replace this with some kind of 'loaded' signal.
 
             self.timer_order = [x['name'] for x in timers]
@@ -300,10 +307,12 @@ class TimerModel(gobject.GObject):
         on every type of clean exit except xkill. (PyGTK doesn't let you)
 
         Saves the current timer values to disk."""
-        window_state = {
-                 'position': self.app.win.get_position(),
-                'decorated': self.app.win.get_decorated()
-        }
+        #TODO: Re-imeplement this properly.
+        #window_state = {
+        #         'position': self.app.win.get_position(),
+        #        'decorated': self.app.win.get_decorated()
+        #}
+        window_state = {}
 
         timers = []
         for name in self.timer_order:
@@ -316,12 +325,12 @@ class TimerModel(gobject.GObject):
         }
 
         # Don't rely on CPython's refcounting or Python 2.5's "with"
-        fh = open(SAVE_FILE + '.tmp', "wb")
+        fh = open(self.save_file + '.tmp', "wb")
         pickle.dump( (CURRENT_SAVE_VERSION, data), fh)
         fh.close()
 
         # Corruption from saving without atomic replace has been observed
-        os.rename(SAVE_FILE + '.tmp', SAVE_FILE)
+        os.rename(self.save_file + '.tmp', self.save_file)
         self.last_save = time.time()
         return True
 
@@ -610,13 +619,13 @@ class MainWin(gtk.Window):
 class TimeClock(object):
     selectedBtn = None
 
-    def __init__(self, start_mode="sleep"):
+    def __init__(self, timer):
 
         #Set the Glade file
         self.mTree = gtk.glade.XML(os.path.join(SELF_DIR, "main_large.glade"))
         self.pTree = gtk.glade.XML(os.path.join(SELF_DIR, "preferences.glade"))
 
-        self.timer = TimerModel(self, start_mode)
+        self.timer = timer
         self._init_widgets()
 
         # 'tick' must be connected before the load.
@@ -746,14 +755,16 @@ class TimeClock(object):
         self.pTree.get_widget('prefsDlg').hide()
 
 def main():
-    me = SingleInstance()
-    gtkexcepthook.enable()
-
     from optparse import OptionParser
     parser = OptionParser(version="%%prog v%s" % __version__)
     parser.add_option('-m', '--initial-mode',
                       action="store", dest="mode", default="sleep",
                       metavar="MODE", help="start in MODE. (Use 'help' for a list)")
+    parser.add_option('--develop',
+                      action="store_true", dest="develop", default=False,
+                      help="Use separate data store and single instance lock"
+                      "so a development copy can be launched without "
+                      "interfering with normal use")
 
     opts, args = parser.parse_args()
     #FIXME: Restore this once the model is truly independent of the view.
@@ -763,7 +774,21 @@ def main():
     #elif (opts.mode not in MODE_NAMES):
     #    print "Mode '%s' not recognized, defaulting to sleep." % opts.mode
     #    opts.mode = None
-    app = TimeClock(start_mode=opts.mode)
+
+    if opts.develop:
+        lockname = __file__ + '.dev'
+        savefile = SAVE_FILE + '.dev'
+    else:
+        lockname, savefile = None, SAVE_FILE
+
+    keepalive = []
+    keepalive.append(SingleInstance(lockname=lockname))
+    # This two-line definition shuts PyFlakes up about "assigned but never used"
+    # Stuff beyond this point only runs if no other instance is already running.
+
+    gtkexcepthook.enable()
+    timer = TimerModel(opts.mode, save_file=savefile)
+    app = TimeClock(timer)
     MainWin(app.timer)
     LibNotifyNotifier(app.timer)
     AudioNotifier(app.timer)

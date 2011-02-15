@@ -491,11 +491,11 @@ class AudioNotifier(gobject.GObject):
 #{ UI Components
 
 class ModeButton(gtk.RadioButton):
-    def __init__(self, model, group=None, *args, **kwargs):
+    def __init__(self, model, name, group=None, *args, **kwargs):
         gtk.RadioButton.__init__(self, *args, **kwargs)
 
         self.model = model
-        self.mode = model.get('name', None)
+        self.mode = name
 
         self.progress = gtk.ProgressBar()
         self.add(self.progress)
@@ -508,14 +508,15 @@ class ModeButton(gtk.RadioButton):
         return self.progress.get_text()
 
     def update_label(self):
-        remaining = round(self.model['total'] - self.model['used'])
+        model = self.model.timers[self.mode]
+        remaining = round(model['total'] - model['used'])
         if remaining >= 0:
             ptime = time.strftime('%H:%M:%S', time.gmtime(remaining))
         else:
             ptime = time.strftime('-%H:%M:%S', time.gmtime(abs(remaining)))
 
-        self.progress.set_text('%s: %s' % (self.model['name'], ptime))
-        self.progress.set_fraction(max(float(remaining) / self.model['total'], 0))
+        self.progress.set_text('%s: %s' % (model['name'], ptime))
+        self.progress.set_fraction(max(float(remaining) / model['total'], 0))
 
 class MainWinContextMenu(gtk.Menu):
     def __init__(self, model, *args, **kwargs):
@@ -562,7 +563,7 @@ class MainWin(gtk.Window):
 
         self.btns = {}
         for name in self.timer.timer_order:
-            btn = ModeButton(model=self.timer.timers[name])
+            btn = ModeButton(model=self.timer, name=name)
             self.btns[name] = btn
 
             btn.connect('toggled', self.btn_toggled)

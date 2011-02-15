@@ -309,6 +309,8 @@ class TimerModel(gobject.GObject):
 
     def remaining(self, mode=None):
         mode = mode or self.mode
+        if not mode: #TODO: Make modes objects so I can do this properly.
+            return 0
         return mode['total'] - mode['used']
 
     def save(self):
@@ -434,6 +436,8 @@ class LibNotifyNotifier(gobject.GObject):
 
     def tick(self, model, mode, delta):
         #TODO: This should be more elegant (Probably make modes objects)
+        if not model.mode: #TODO: Make modes objects so I can do this properly.
+            return
         if model.remaining() > 0:
             return
         else:
@@ -452,8 +456,6 @@ class LibNotifyNotifier(gobject.GObject):
             notification.last_shown = now
             notification.show()
 
-
-#TODO: Implement this.
 class AudioNotifier(gobject.GObject):
     """An auditory timer expiry notification based on a portability layer."""
     def __init__(self, model):
@@ -477,6 +479,8 @@ class AudioNotifier(gobject.GObject):
             # - http://stackoverflow.com/questions/307305/play-a-sound-with-python
 
     def tick(self, model, mode, delta):
+        if not model.mode: #TODO: Make modes objects so I can do this properly.
+            return
         now = time.time()
         if model.remaining() <= 0 and self.last_notified + 900 < now:
             #TODO: Did I really need to do this?

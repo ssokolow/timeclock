@@ -96,6 +96,7 @@ SAVE_FILE = os.path.join(DATA_DIR, "timeclock.sav")
 SAVE_INTERVAL = 60 * 5  # 5 Minutes
 NOTIFY_INTERVAL = 60 * 15 # 15 Minutes
 NOTIFY_SOUND = os.path.join(os.path.dirname(os.path.realpath(__file__)), '49213__tombola__Fisher_Price29.wav')
+DEFAULT_UI_LIST = ['compact', 'legacy']
 file_exists = os.path.isfile
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
@@ -762,12 +763,22 @@ class TimeClock(object):
         self.update_progressBars()
         self.pTree.get_widget('prefsDlg').hide()
 
+KNOWN_UI_MAP = {
+        'compact': MainWin,
+        'legacy': TimeClock
+}
+
 def main():
     from optparse import OptionParser
     parser = OptionParser(version="%%prog v%s" % __version__)
     parser.add_option('-m', '--initial-mode',
                       action="store", dest="mode", default="sleep",
                       metavar="MODE", help="start in MODE. (Use 'help' for a list)")
+    parser.add_option('--ui',
+                      action="append", dest="interfaces", default=[],
+                      type='choice', choices=KNOWN_UI_MAP.keys(), metavar="NAME",
+                      help="Launch the specified UI instead of the default. "
+                      "May be specified multiple times for multiple UIs.")
     parser.add_option('--develop',
                       action="store_true", dest="develop", default=False,
                       help="Use separate data store and single instance lock"
@@ -795,19 +806,29 @@ def main():
     # Stuff beyond this point only runs if no other instance is already running.
 
     gtkexcepthook.enable()
+
+    # Model
     timer = TimerModel(opts.mode, save_file=savefile)
-    app = TimeClock(timer)
-    MainWin(app.timer)
-    LibNotifyNotifier(app.timer)
-    AudioNotifier(app.timer)
-    TimerController(app.timer)
+
+    # Controllers
+    TimerController(timer)
+
+    # Notification Views
+    LibNotifyNotifier(timer)
+    AudioNotifier(timer)
+
+    # UI Views
+    if not opts.interfaces:
+        opts.interfaces = DEFAULT_UI_LIST
+    for name in opts.interfaces:
+        KNOWN_UI_MAP[name](timer)
 
     #TODO: Split out the PyNotify parts into a separate view(?) module.
     #TODO: Write up an audio notification view(?) module.
     #TODO: Explore adding a "set urgent hint" call on the same interval as these.
 
     # Save state on exit
-    sys.exitfunc = app.timer.save
+    sys.exitfunc = timer.save
 
     # Make sure signals call sys.exitfunc.
     for signame in ("SIGTERM", "SIGINT", "SIGHUP", "SIGQUIT"):

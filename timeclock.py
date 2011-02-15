@@ -126,6 +126,9 @@ else:
     have_pynotify = True
     pynotify.init(__appname__)
 
+# Keep "import gst" from grabbing --help, printing its own help, and exiting
+_argv, sys.argv = sys.argv, []
+
 try:
     import gst
     import urllib
@@ -133,6 +136,11 @@ except ImportError:
     have_gstreamer = False
 else:
     have_gstreamer = True
+
+# Restore sys.argv so I can parse it cleanly.
+# XXX: Use a context manager once I decide to drop Python 2.4 support.
+sys.argv = _argv
+del _argv
 
 class SingleInstance:
     """http://stackoverflow.com/questions/380870/python-single-instance-of-program/1265445#1265445"""

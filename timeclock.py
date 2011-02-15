@@ -298,6 +298,7 @@ class TimerModel(gobject.GObject):
                 logging.error("Unable to load save file. Ignoring: %s", e)
                 timers = copy.deepcopy(default_timers)
             else:
+                logging.info("Save file loaded successfully")
                 # File loaded successfully, now we put the data in place.
                 self.notify = notify
                 #self.app.saved_state = win_state
@@ -666,7 +667,6 @@ class TimeClock(object):
         self.timer.connect('tick', self.update_progressBars)
         self.timer.connect('mode-changed', self.mode_changed)
         self.saved_state = {}
-        self.timer.load()
 
         # Connect signals
         mDic = { "on_mode_toggled"    : self.btn_toggled,
@@ -846,6 +846,7 @@ def main():
 
     # Model
     timer = TimerModel(opts.mode, save_file=savefile)
+    timer.load()
 
     # Controllers
     TimerController(timer)

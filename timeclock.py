@@ -552,7 +552,7 @@ class MainWin(gtk.Window):
             btn = ModeButton(model=self.timer.timers[name])
             self.btns[name] = btn
 
-            btn.connect('toggled', self.mode_changed)
+            btn.connect('toggled', self.btn_toggled)
             btn.connect('button-press-event', self.showMenu)
             self.btnbox.add(btn)
 
@@ -582,6 +582,7 @@ class MainWin(gtk.Window):
         self.stick()
 
         self.timer.connect('tick', self.update)
+        self.timer.connect('mode-changed', self.mode_changed)
         self.evbox.connect('button-release-event', self.showMenu)
         # TODO: Make this work.
         #self.evbox.connect('popup-menu', self.showMenu)
@@ -590,13 +591,18 @@ class MainWin(gtk.Window):
         self.menu.show_all() #TODO: Is this line necessary?
         self.show_all()
 
-    def mode_changed(self, widget):
+    def btn_toggled(self, widget):
         """Callback for clicking the timer-selection radio buttons"""
         if widget.get_active():
             self.timer.set_active(widget.mode)
 
         if not widget.mode:
             self.timer.save()
+
+    def mode_changed(self, model, mode=None):
+        btn = self.btns.get(mode)
+        if btn and not btn.get_active():
+            btn.set_active(True)
 
     def update(self, timer, mode=None, delta=None):
         """Common code used for initializing and updating the progress bars.
@@ -643,12 +649,13 @@ class TimeClock(object):
 
         # 'tick' must be connected before the load.
         self.timer.connect('tick', self.update_progressBars)
+        self.timer.connect('mode-changed', self.mode_changed)
         self.saved_state = {}
         self.timer.load()
 
         # Connect signals
-        mDic = { "on_mode_toggled"    : self.mode_changed,
-                 "on_reset_clicked"   : self.reset_clicked,
+        mDic = { "on_mode_toggled"    : self.btn_toggled,
+                 "on_reset_clicked"   : lambda widget: self.timer.reset(),
                  "on_mainWin_destroy" : gtk.main_quit,
                  "on_prefs_clicked"   : self.prefs_clicked }
         pDic = { "on_prefs_commit"    : self.prefs_commit,
@@ -713,7 +720,7 @@ class TimeClock(object):
                     pbar.set_text(time.strftime('-%H:%M:%S', time.gmtime(abs(remaining))))
                 pbar.set_fraction(max(float(remaining) / timer['total'], 0))
 
-    def mode_changed(self, widget):
+    def btn_toggled(self, widget):
         """Callback for clicking the timer-selection radio buttons"""
         if widget.get_active():
             self.selectedBtn = widget
@@ -722,10 +729,11 @@ class TimeClock(object):
         if not self.selectedBtn.mode:
             self.timer.save()
 
-    def reset_clicked(self, widget):
-        """Callback for the reset button"""
-        self.mTree.get_widget('btn_sleepMode').set_active(True)
-        self.timer.reset()
+    def mode_changed(self, model, mode=None):
+        mode = mode or 'sleep'
+        btn = self.mTree.get_widget('btn_%sMode' % mode.lower())
+        if btn and not btn.get_active():
+            btn.set_active(True)
 
     def prefs_clicked(self, widget):
         """Callback for the preferences button"""

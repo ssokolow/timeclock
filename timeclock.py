@@ -534,7 +534,20 @@ class MainWinContextMenu(gtk.Menu):
         self.append(prefs)
         self.append(quit)
 
-        #TODO: Hook in click bindings.
+        #TODO: asleep
+        reset.connect('activate', self.cb_reset)
+        #TODO: prefs
+        quit.connect('activate', gtk.main_quit)
+
+    def cb_reset(self, widget):
+        #TODO: Look into how to get MainWin via parent-lookup calls so this can be destroyed with its parent.
+        confirm = gtk.MessageDialog(type=gtk.MESSAGE_WARNING,
+                buttons=gtk.BUTTONS_OK_CANCEL,
+                message_format="Reset all timers?\n"
+                "Warning: This operation cannot be undone.")
+        if confirm.run() == gtk.RESPONSE_OK:
+            self.model.reset()
+        confirm.destroy()
 
 class MainWin(gtk.Window):
     def __init__(self, timer):
@@ -591,6 +604,7 @@ class MainWin(gtk.Window):
         self.menu.show_all() #TODO: Is this line necessary?
         self.show_all()
 
+    #TODO: Normalize callback naming
     def btn_toggled(self, widget):
         """Callback for clicking the timer-selection radio buttons"""
         if widget.get_active():
@@ -655,7 +669,7 @@ class TimeClock(object):
 
         # Connect signals
         mDic = { "on_mode_toggled"    : self.btn_toggled,
-                 "on_reset_clicked"   : lambda widget: self.timer.reset(),
+                 "on_reset_clicked"   : self.cb_reset,
                  "on_mainWin_destroy" : gtk.main_quit,
                  "on_prefs_clicked"   : self.prefs_clicked }
         pDic = { "on_prefs_commit"    : self.prefs_commit,
@@ -702,6 +716,16 @@ class TimeClock(object):
         for widget in self.timer_widgets:
             widget.set_property('draw-indicator', False)
         sleepBtn.set_property('draw-indicator', False)
+
+    def cb_reset(self, widget):
+        #TODO: Look into how to get MainWin via parent-lookup calls so this can be destroyed with its parent.
+        confirm = gtk.MessageDialog(type=gtk.MESSAGE_WARNING,
+                buttons=gtk.BUTTONS_OK_CANCEL,
+                message_format="Reset all timers?\n"
+                "Warning: This operation cannot be undone.")
+        if confirm.run() == gtk.RESPONSE_OK:
+            self.timer.reset()
+        confirm.destroy()
 
     def update_progressBars(self, timer=None, mode=None, delta=None):
         """Common code used for initializing and updating the progress bars.

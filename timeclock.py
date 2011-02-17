@@ -550,7 +550,7 @@ class RoundedWindow(gtk.Window):
 
 class ModeButton(gtk.RadioButton):
     def __init__(self, model, name, group=None, *args, **kwargs):
-        gtk.RadioButton.__init__(self, *args, **kwargs)
+        super(ModeButton, self).__init__(*args, **kwargs)
 
         self.model = model
         self.mode = name
@@ -578,7 +578,7 @@ class ModeButton(gtk.RadioButton):
 
 class MainWinContextMenu(gtk.Menu):
     def __init__(self, model, *args, **kwargs):
-        gtk.Menu.__init__(self, *args, **kwargs)
+        super(MainWinContextMenu, self).__init__(*args, **kwargs)
         self.model = model
 
         asleep = gtk.RadioMenuItem(None, "_Asleep")
@@ -608,9 +608,9 @@ class MainWinContextMenu(gtk.Menu):
             self.model.reset()
         confirm.destroy()
 
-class MainWin(gtk.Window):
+class MainWin(RoundedWindow):
     def __init__(self, timer):
-        gtk.Window.__init__(self)
+        super(MainWin, self).__init__()
         self.set_icon_from_file(get_icon_path(64))
 
         self.timer = timer

@@ -4,6 +4,8 @@
 A simple application to help lazy procrastinators (me) to manage their time.
 See http://ssokolow.github.com/timeclock/ for a screenshot.
 
+@todo: Update site to reflect PyGTK 2.8 being required for PyCairo.
+
 @todo: Planned improvements:
  - Split "mode" into "selected" and "active" for a generalized version of the
    (pressed button vs. title displayed in taskbar) distinction.
@@ -110,7 +112,7 @@ try:
 except:
     pass
 
-import gtk, gobject
+import cairo, gtk, gobject
 import gtk.glade
 
 import gtkexcepthook
@@ -490,6 +492,54 @@ class AudioNotifier(gobject.GObject):
             self.last_notified = now
 
 #{ UI Components
+
+class RoundedWindow(gtk.Window):
+    def __init__(self):
+        gtk.Window.__init__(self)
+        self.connect('size-allocate', self._on_size_allocate)
+        self.set_decorated(False)
+
+    def rounded_rectangle(self, cr, x, y, w, h, r=20):
+        """Draw a rounded rectangle using Cairo.
+        Source: http://stackoverflow.com/questions/2384374/rounded-rectangle-in-pygtk
+
+        This is just one of the samples from
+        http://www.cairographics.org/cookbook/roundedrectangles/
+          A****BQ
+         H      C
+         *      *
+         G      D
+          F****E
+        """
+
+        cr.move_to(x+r,y)                      # Move to A
+        cr.line_to(x+w-r,y)                    # Straight line to B
+        cr.curve_to(x+w,y,x+w,y,x+w,y+r)       # Curve to C, Control points are both at Q
+        cr.line_to(x+w,y+h-r)                  # Move to D
+        cr.curve_to(x+w,y+h,x+w,y+h,x+w-r,y+h) # Curve to E
+        cr.line_to(x+r,y+h)                    # Line to F
+        cr.curve_to(x,y+h,x,y+h,x,y+h-r)       # Curve to G
+        cr.line_to(x,y+r)                      # Line to H
+        cr.curve_to(x,y,x,y,x+r,y)             # Curve to A
+
+    def _on_size_allocate(self, win, allocation):
+        w,h = allocation.width, allocation.height
+        bitmap = gtk.gdk.Pixmap(None, w, h, 1)
+        cr = bitmap.cairo_create()
+
+        # Clear the bitmap
+        cr.set_source_rgb(0.0, 0.0, 0.0)
+        cr.set_operator(cairo.OPERATOR_CLEAR)
+        cr.paint()
+
+        # Draw our shape into the bitmap using cairo
+        cr.set_source_rgb(1.0, 1.0, 1.0)
+        cr.set_operator(cairo.OPERATOR_SOURCE)
+        self.rounded_rectangle(cr, 0, 0, w, h, 10)
+        cr.fill()
+
+        # Set the window shape
+        win.shape_combine_mask(bitmap, 0, 0)
 
 class ModeButton(gtk.RadioButton):
     def __init__(self, model, name, group=None, *args, **kwargs):

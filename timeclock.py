@@ -117,7 +117,14 @@ import gtk.glade
 
 import gtkexcepthook
 
+# Known generated icon sizes.
+ICON_SIZES = [16,22,32,48,64]
 def get_icon_path(size):
+    for icon_size in sorted(ICON_SIZES, reverse=True):
+        if icon_size <= size:
+            size = icon_size
+            break
+
     return os.path.join(SELF_DIR, "icons", "timeclock_%dx%d.png" % (size, size))
 
 try:
@@ -631,7 +638,7 @@ class MainWin(gtk.Window):
             self.btns[name].set_group(sleep_btn)
         self.btns[None] = sleep_btn
 
-        drag_handle = gtk.image_new_from_file(get_icon_path(22))
+        drag_handle = gtk.Image()
 
         self.box.add(drag_handle)
         self.box.add(self.btnbox)
@@ -655,6 +662,9 @@ class MainWin(gtk.Window):
         self.update(self.timer)
         self.menu.show_all() #TODO: Is this line necessary?
         self.show_all()
+
+        # Set the icon after we know how much vert space the GTK+ theme gives us.
+        drag_handle.set_from_file(get_icon_path(drag_handle.get_allocation()[3]))
 
     #TODO: Normalize callback naming
     def btn_toggled(self, widget):

@@ -99,6 +99,7 @@ SAVE_INTERVAL = 60 * 5  # 5 Minutes
 NOTIFY_INTERVAL = 60 * 15 # 15 Minutes
 NOTIFY_SOUND = os.path.join(os.path.dirname(os.path.realpath(__file__)), '49213__tombola__Fisher_Price29.wav')
 DEFAULT_UI_LIST = ['compact', 'legacy']
+DEFAULT_NOTIFY_LIST = ['audio', 'libnotify']
 file_exists = os.path.isfile
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
@@ -498,6 +499,11 @@ class AudioNotifier(gobject.GObject):
             self.bin.set_state(gst.STATE_PLAYING)
             self.last_notified = now
 
+KNOWN_NOTIFY_MAP = {
+        'audio': AudioNotifier,
+        'libnotify': LibNotifyNotifier
+}
+
 #{ UI Components
 
 class RoundedWindow(gtk.Window):
@@ -876,6 +882,11 @@ def main():
                       type='choice', choices=KNOWN_UI_MAP.keys(), metavar="NAME",
                       help="Launch the specified UI instead of the default. "
                       "May be specified multiple times for multiple UIs.")
+    parser.add_option('--notifier',
+                      action="append", dest="notifiers", default=[],
+                      type='choice', choices=KNOWN_NOTIFY_MAP.keys(), metavar="NAME",
+                      help="Activate the specified notification method. "
+                      "May be specified multiple times for multiple notifiers.")
     parser.add_option('--develop',
                       action="store_true", dest="develop", default=False,
                       help="Use separate data store and single instance lock"
@@ -912,14 +923,18 @@ def main():
     TimerController(timer)
 
     # Notification Views
-    LibNotifyNotifier(timer)
-    AudioNotifier(timer)
+    if not opts.notifiers:
+        opts.notifiers = DEFAULT_NOTIFY_LIST
+    for name in opts.notifiers:
+        KNOWN_NOTIFY_MAP[name](timer)
+        logging.info("Successfully instantiated notifier: %s", name)
 
     # UI Views
     if not opts.interfaces:
         opts.interfaces = DEFAULT_UI_LIST
     for name in opts.interfaces:
         KNOWN_UI_MAP[name](timer)
+        logging.info("Successfully instantiated UI: %s", name)
 
     #TODO: Split out the PyNotify parts into a separate view(?) module.
     #TODO: Write up an audio notification view(?) module.

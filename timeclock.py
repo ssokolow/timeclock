@@ -128,31 +128,6 @@ def get_icon_path(size):
 
     return os.path.join(SELF_DIR, "icons", "timeclock_%dx%d.png" % (size, size))
 
-try:
-    import pynotify
-    from xml.sax.saxutils import escape as xmlescape
-except ImportError:
-    have_pynotify = False
-else:
-    have_pynotify = True
-    pynotify.init(__appname__)
-
-# Keep "import gst" from grabbing --help, printing its own help, and exiting
-_argv, sys.argv = sys.argv, []
-
-try:
-    import gst
-    import urllib
-except ImportError:
-    have_gstreamer = False
-else:
-    have_gstreamer = True
-
-# Restore sys.argv so I can parse it cleanly.
-# XXX: Use a context manager once I decide to drop Python 2.4 support.
-sys.argv = _argv
-del _argv
-
 class SingleInstance:
     """http://stackoverflow.com/questions/380870/python-single-instance-of-program/1265445#1265445"""
     def __init__(self, useronly=True, lockfile=None, lockname=None):
@@ -425,25 +400,35 @@ class LibNotifyNotifier(gobject.GObject):
 
     :todo: Redesign this on an abstraction over Growl, libnotify, and toasts.
     """
+    pynotify = None
+
     def __init__(self, model):
+        # ImportError should be caught when instantiating this.
+        import pynotify
+        from xml.sax.saxutils import escape as xmlescape
+
+        # Do this second because I'm unfamiliar with GObject refcounting.
         self.__gobject_init__()
 
+        # Only init PyNotify once
+        if not self.pynotify:
+            pynotify.init(__appname__)
+            self.__class__.pynotify = pynotify
+
+        # Make the notifications in advance,
         self.last_notified = 0
+        self.notifications = {}
+        for mode in model.timers:
+            notification = pynotify.Notification(
+                "%s Time Exhausted" % mode,
+                "You have used all allotted time for %s" % xmlescape(mode.lower()),
+                get_icon_path(48))
+            notification.set_urgency(pynotify.URGENCY_NORMAL)
+            notification.set_timeout(pynotify.EXPIRES_NEVER)
+            notification.last_shown = 0
+            self.notifications[mode] = notification
 
-        if have_pynotify:
-            # Make the notifications in advance,
-            self.notifications = {}
-            for mode in model.timers:
-                notification = pynotify.Notification(
-                    "%s Time Exhausted" % mode,
-                    "You have used all allotted time for %s" % xmlescape(mode.lower()),
-                    get_icon_path(48))
-                notification.set_urgency(pynotify.URGENCY_NORMAL)
-                notification.set_timeout(pynotify.EXPIRES_NEVER)
-                notification.last_shown = 0
-                self.notifications[mode] = notification
-
-            model.connect('tick', self.tick)
+        model.connect('tick', self.tick)
 
     def tick(self, model, mode, delta):
         #TODO: This should be more elegant (Probably make modes objects)
@@ -470,24 +455,36 @@ class LibNotifyNotifier(gobject.GObject):
 class AudioNotifier(gobject.GObject):
     """An auditory timer expiry notification based on a portability layer."""
     def __init__(self, model):
+        # Keep "import gst" from grabbing --help, printing its own help, and exiting
+        _argv, sys.argv = sys.argv, []
+
+        try:
+            import gst
+            import urllib
+        finally:
+            # Restore sys.argv so I can parse it cleanly.
+            # XXX: Use a context manager once I decide to drop Python 2.4 support.
+            sys.argv = _argv
+            del _argv
+
+        self.gst = gst
         self.__gobject_init__()
 
         self.last_notified = 0
         self.uri = NOTIFY_SOUND
 
-        if have_gstreamer:
-            if os.path.exists(self.uri):
-                self.uri = 'file://' + urllib.pathname2url(os.path.abspath(self.uri))
-            self.bin = gst.element_factory_make("playbin")
-            self.bin.set_property("uri", self.uri)
+        if os.path.exists(self.uri):
+            self.uri = 'file://' + urllib.pathname2url(os.path.abspath(self.uri))
+        self.bin = gst.element_factory_make("playbin")
+        self.bin.set_property("uri", self.uri)
 
-            if model:
-                model.connect('tick', self.tick)
+        if model:
+            model.connect('tick', self.tick)
 
-            #TODO: Fall back to using winsound or wave and ossaudiodev or maybe pygame
-            #TODO: Design a generic wrapper which also tries things like these:
-            # - http://stackoverflow.com/questions/276266/whats-a-cross-platform-way-to-play-a-sound-file-in-python
-            # - http://stackoverflow.com/questions/307305/play-a-sound-with-python
+        #TODO: Fall back to using winsound or wave and ossaudiodev or maybe pygame
+        #TODO: Design a generic wrapper which also tries things like these:
+        # - http://stackoverflow.com/questions/276266/whats-a-cross-platform-way-to-play-a-sound-file-in-python
+        # - http://stackoverflow.com/questions/307305/play-a-sound-with-python
 
     def tick(self, model, mode, delta):
         if not model.mode: #TODO: Make modes objects so I can do this properly.
@@ -495,8 +492,8 @@ class AudioNotifier(gobject.GObject):
         now = time.time()
         if model.remaining() <= 0 and self.last_notified + 900 < now:
             #TODO: Did I really need to do this?
-            self.bin.set_state(gst.STATE_NULL)
-            self.bin.set_state(gst.STATE_PLAYING)
+            self.bin.set_state(self.gst.STATE_NULL)
+            self.bin.set_state(self.gst.STATE_PLAYING)
             self.last_notified = now
 
 KNOWN_NOTIFY_MAP = {
@@ -838,12 +835,8 @@ class TimeClock(object):
         # pynotify is not installed.
         notify_box = self.pTree.get_widget('checkbutton_notify')
         notify_box.set_active(self.timer.notify)
-        if have_pynotify:
-            notify_box.set_sensitive(True)
-            notify_box.set_label("display notifications")
-        else:
-            notify_box.set_sensitive(False)
-            notify_box.set_label("display notifications (Requires pynotify)")
+        notify_box.set_sensitive(True)
+        notify_box.set_label("display notifications")
 
         self.pTree.get_widget('prefsDlg').show()
 
@@ -926,15 +919,23 @@ def main():
     if not opts.notifiers:
         opts.notifiers = DEFAULT_NOTIFY_LIST
     for name in opts.notifiers:
-        KNOWN_NOTIFY_MAP[name](timer)
-        logging.info("Successfully instantiated notifier: %s", name)
+        try:
+            KNOWN_NOTIFY_MAP[name](timer)
+        except ImportError:
+            logging.warn("Could not initialize notifier %s due to unsatisfied dependencies.", name)
+        else:
+            logging.info("Successfully instantiated notifier: %s", name)
 
     # UI Views
     if not opts.interfaces:
         opts.interfaces = DEFAULT_UI_LIST
     for name in opts.interfaces:
-        KNOWN_UI_MAP[name](timer)
-        logging.info("Successfully instantiated UI: %s", name)
+        try:
+            KNOWN_UI_MAP[name](timer)
+        except ImportError:
+            logging.warn("Could not initialize UI %s due to unsatisfied dependencies.", name)
+        else:
+            logging.info("Successfully instantiated UI: %s", name)
 
     #TODO: Split out the PyNotify parts into a separate view(?) module.
     #TODO: Write up an audio notification view(?) module.

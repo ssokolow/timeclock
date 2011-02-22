@@ -6,6 +6,11 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
 
 @todo: Update site to reflect PyGTK 2.8 being required for PyCairo.
 
+@todo: Optionally use idle detection to auto-trigger Overhead on wake
+ - http://msdn.microsoft.com/en-us/library/ms646302.aspx (pywin32?)
+ - http://stackoverflow.com/questions/608710/monitoring-user-idle-time
+ - Probably a good idea to write and share a wrapper
+
 @todo: Planned improvements:
  - Split "mode" into "selected" and "active" for a generalized version of the
    (pressed button vs. title displayed in taskbar) distinction.
@@ -29,13 +34,6 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
  - Report PyGTK's uncatchable xkill response on the bug tracker.
  - Explore how progress bars behave when their base colors are changed:
    (http://hg.atheme.org/audacious/audacious-plugins/diff/a25b618e8f4a/src/gtkui/ui_playlist_widget.c)
-
-@todo: Optionally use idle detection to auto-trigger Overhead on wake
- - http://www.xfree86.org/current/Xss.3.html (xpyb. python-xlib has no XSS ext. wrapper)
-   - Poll with xcb.get_file_descriptor and GTK's select handler.
- - http://msdn.microsoft.com/en-us/library/ms646302.aspx (pywin32?)
- - http://stackoverflow.com/questions/608710/monitoring-user-idle-time
- - Probably a good idea to write and share a wrapper
 
 @todo: Notification TODO:
  - Provide a fallback for when libnotify notifications are unavailable.
@@ -96,6 +94,7 @@ if not os.path.isdir(DATA_DIR):
                                % DATA_DIR)
 SAVE_FILE = os.path.join(DATA_DIR, "timeclock.sav")
 SAVE_INTERVAL = 60 * 5  # 5 Minutes
+SLEEP_RESET_INTERVAL = 3600 * 6  # 6 hours
 NOTIFY_INTERVAL = 60 * 15 # 15 Minutes
 NOTIFY_SOUND = os.path.join(os.path.dirname(os.path.realpath(__file__)), '49213__tombola__Fisher_Price29.wav')
 DEFAULT_UI_LIST = ['compact', 'legacy']
@@ -388,10 +387,70 @@ class TimerController(gobject.GObject):
 
 
 class IdleController(gobject.GObject):
-    """A controller to set and unset Asleep automatically."""
+    """A controller to automatically reset the timer if you fall asleep."""
     def __init__(self, model):
         self.__gobject_init__()
-        pass #TODO: Implement
+        self._source_remove = gobject.source_remove
+        #See SingleInstance for rationale
+
+        self.model = model
+        self.last_tick = 0
+
+        try:
+            import xcb, xcb.xproto
+            import xcb.screensaver
+        except ImportError:
+            pass
+        else:
+            self.conn = xcb.connect()
+            self.setup = self.conn.get_setup()
+            self.ss_conn = self.conn(xcb.screensaver.key)
+
+            #TODO: Also handle gobject.IO_HUP in case of disconnect.
+            self.watch_id = gobject.io_add_watch(
+                    self.conn.get_file_descriptor(),
+                    gobject.IO_IN | gobject.IO_PRI,
+                    self.cb_xcb_response)
+
+            model.connect('tick', self.cb_tick)
+
+
+    def __del__(self):
+        self._source_remove(self.watch_id)
+        self.conn.disconnect()
+
+    def cb_tick(self, model, mode, delta):
+        now = time.time()
+        if self.last_tick + 60 < now:
+            self.last_tick = now
+
+            #TODO: Can I do this with cb_xcb_response for less blocking?
+            idle_query = self.ss_conn.QueryInfo(self.setup.roots[0].root)
+            idle_secs = idle_query.reply().ms_since_user_input / 1000.0
+
+            # We don't need to check self.model.mode because asleep stops
+            # the timer from ticking, but let's be safe and give find
+            # the opportunity to pick this up if I rework it.
+            if idle_secs >= SLEEP_RESET_INTERVAL and self.model.mode:
+                self.model.reset()
+
+    def cb_xcb_response(self, source, condition):
+        """Accept and discard X events to prevent any risk of a frozen
+        connection because some buffer somewhere is full.
+
+        :todo: Decide how to handle conn.has_error() != 0 (disconnected)
+        :note: It's safe to call conn.disconnect() multiple times.
+        """
+        try:
+            # (Don't use "while True" in case the xcb "NULL when no more"
+            #  behaviour occasionally happens)
+            while self.conn.poll_for_event():
+                pass
+        except IOError:
+            # In testing, IOError is raised when no events are available.
+            pass
+
+        return True # Keep the callback registered.
 
 #{ Notification Modules
 
@@ -682,6 +741,7 @@ class MainWin(RoundedWindow):
         btn = self.btns.get(mode)
         if btn and not btn.get_active():
             btn.set_active(True)
+        self.update(model)
 
     def update(self, timer, mode=None, delta=None):
         """Common code used for initializing and updating the progress bars.
@@ -914,6 +974,7 @@ def main():
 
     # Controllers
     TimerController(timer)
+    IdleController(timer)
 
     # Notification Views
     if not opts.notifiers:

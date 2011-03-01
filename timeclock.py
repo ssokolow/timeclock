@@ -19,10 +19,10 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
  - Double-check that it still works on Python 2.4.
  - Fixing setting up a decent MVC-ish archtecture using GObject signals.
    http://stackoverflow.com/questions/2057921/python-gtk-create-custom-signals
- - Clicking the preferences button while the dialog is shown shouldn't reset the
-   unsaved preference changes.
- - Extend the single-instance system to use D-Bus if available to raise/focus the
-   existing instance if one is already running.
+ - Clicking the preferences button while the dialog is shown shouldn't reset
+   the unsaved preference changes.
+ - Extend the single-instance system to use D-Bus if available to raise/focus
+   the existing instance if one is already running.
  - Figure out some intuitive, non-distracting way to allow the user to make
    corrections. (eg. if you forget to set the timer to leisure before going AFK)
  - Should I offer preferences options for remembering window position and things
@@ -60,9 +60,11 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
 """
 
 __appname__ = "The Procrastinator's Timeclock"
-__authors__  = ["Stephan Sokolow (deitarion/SSokolow)", "Charlie Nolan (FunnyMan3595)"]
 __version__ = "0.2.99.0"
 __license__ = "GNU GPL 2.0 or later"
+__authors__  = [
+    "Stephan Sokolow (deitarion/SSokolow)",
+    "Charlie Nolan (FunnyMan3595)"]
 
 default_timers = [
     {

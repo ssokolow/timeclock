@@ -34,6 +34,7 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
  - Report PyGTK's uncatchable xkill response on the bug tracker.
  - Explore how progress bars behave when their base colors are changed:
    (http://hg.atheme.org/audacious/audacious-plugins/diff/a25b618e8f4a/src/gtkui/ui_playlist_widget.c)
+ - Look into offering an IdleController mode for people who turn their PCs off.
 
 @todo: Notification TODO:
  - Provide a fallback for when libnotify notifications are unavailable.
@@ -216,6 +217,7 @@ class TimerModel(gobject.GObject):
             self.timers[name]['used'] = 0
             self.emit('tick', None, 0)
         self.set_active(None)
+        self.save()
 
     def load(self):
         """Load the save file if present. Log and start clean otherwise."""

@@ -192,6 +192,42 @@ class SingleInstance:
 
 #{ Model stuff
 
+#TODO: Implement this.
+class Mode(gobject.GObject):
+    """Data and operations for a timer mode"""
+    __gsignals__ = {
+        'tick': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (float,))
+    }
+
+    def __init__(self, name, total, used=0, overflow=None):
+        self.__gobject_init__()
+
+        self.name = name
+        self.total = total
+        self.used = used
+        self.overflow = overflow
+
+    def remaining(self):
+        """Return the remaining time in this mode as an integer"""
+        return self.total - self.used
+
+    def reset(self):
+        """Reset the timer and update listeners."""
+        self.used = 0
+        self.emit('tick', 0)
+
+    def save(self):
+        """Serialize into a dict that can be used with __init__."""
+        return {
+                'name': self.name,
+                'total': self.total,
+                'used': self.used,
+                'overflow': self.overflow,
+            }
+
+    def tick(self, delta=0):
+        self.emit('tick', delta)
+
 CURRENT_SAVE_VERSION = 6 #: Used for save file versioning
 class TimerModel(gobject.GObject):
     """Model class which still needs more refactoring."""
@@ -208,16 +244,19 @@ class TimerModel(gobject.GObject):
 
         self.notify = True
         self.timer_order = [x['name'] for x in default_timers]
-        self.timers = dict((x['name'], x) for x in default_timers)
+        self.timers = dict((x['name'], Mode(**x)) for x in default_timers)
         self.mode = self.timers.get(start_mode, None)
+
+    def tick(self, delta=0):
+        if self.mode:
+            self.mode.tick(delta)
+            self.emit('tick', self.mode.name, delta)
 
     def reset(self):
         """Reset all timers to starting values"""
-        for name in self.timers:
-            self.timers[name]['used'] = 0
-            self.emit('tick', None, 0)
+        for timer in self.timers.values():
+            timer.reset()
         self.set_active(None)
-        self.save()
 
     def load(self):
         """Load the save file if present. Log and start clean otherwise."""
@@ -291,14 +330,14 @@ class TimerModel(gobject.GObject):
                 #FIXME: Replace this with some kind of 'loaded' signal.
 
             self.timer_order = [x['name'] for x in timers]
-            self.timers = dict((x['name'], x) for x in timers)
-            self.emit('tick', None, 0)
+            self.timers = dict((x['name'], Mode(**x)) for x in timers)
+            self.tick(0)
 
     def remaining(self, mode=None):
         mode = mode or self.mode
-        if not mode: #TODO: Make modes objects so I can do this properly.
+        if not mode: #TODO: Make asleep an object so I don't need this.
             return 0
-        return mode['total'] - mode['used']
+        return mode.remaining()
 
     def save(self):
         """Exit/Timeout handler for the app. Gets called every five minutes and
@@ -314,7 +353,7 @@ class TimerModel(gobject.GObject):
 
         timers = []
         for name in self.timer_order:
-            timers.append(self.timers[name])
+            timers.append(self.timers[name].save())
 
         data = {
             'timers': timers,
@@ -335,11 +374,11 @@ class TimerModel(gobject.GObject):
     def get_active(self):
         return self.mode
 
-    def set_active(self, name):
+    def set_active(self, mode):
         #XXX: Decide how to properly handle the Asleep case.
-        self.mode = self.timers.get(name, None)
-        self.emit('mode-changed', name)
-        #TODO: Actually listen on this signal.
+        self.mode = mode
+        self.save()
+        self.emit('mode-changed', getattr(mode, 'name', None))
 
 #{ Controller Modules
 
@@ -361,25 +400,25 @@ class TimerController(gobject.GObject):
         now, mode = time.time(), self.model.get_active()
         if mode:
             delta = now - self.last_tick
-            self.model.mode['used'] += delta
+            mode.used += delta
 
-            if self.model.remaining() < 0:
-                overtime = abs(self.model.remaining())
-                overflow_to = self.model.timers.get(self.model.mode.get('overflow'))
+            if mode.remaining() < 0:
+                overtime = abs(mode.remaining())
+                overflow_to = self.model.timers.get(mode.overflow)
                 if overflow_to:
                     # TODO: Probably best to rethink to allow accurate
                     # record-keeping. (Maybe an additional field to track
                     # overflowed time so I can drain "total" rather than "used"
                     # without messing up stored settings)
-                    overflow_to['used'] += overtime
+                    overflow_to.used += overtime
                     # This works because overtime keeps getting reset to zero.
 
                 if overflow_to:
-                    self.model.mode['used'] = self.model.mode['total']
-                    self.model.emit('tick', overflow_to['name'], overtime)
+                    mode.used = mode.total
+                    mode.tick(overflow_to.name, overtime)
 
             #TODO: Rework overtime calculation so this is proper.
-            self.model.emit('tick', self.model.mode['name'], delta)
+            self.model.tick(delta)
 
             if now >= (self.model.last_save + SAVE_INTERVAL):
                 self.model.save()
@@ -498,7 +537,7 @@ class LibNotifyNotifier(gobject.GObject):
         if model.remaining() > 0:
             return
         else:
-            overflow_to = model.timers.get(model.mode.get('overflow'))
+            overflow_to = model.timers.get(model.mode.overflow)
             if overflow_to and model.remaining(overflow_to) <= 0:
                 self.notify_exhaustion(overflow_to)
             elif model.remaining() <= 0:
@@ -507,7 +546,7 @@ class LibNotifyNotifier(gobject.GObject):
     def notify_exhaustion(self, mode):
         """Display a libnotify notification that the given timer has expired."""
         #TODO: Probably more elegant to put the time check in tick()
-        notification = self.notifications[mode['name']]
+        notification = self.notifications[mode.name]
         now = time.time()
         if notification.last_shown + 900 < now:
             notification.last_shown = now
@@ -613,32 +652,32 @@ class RoundedWindow(gtk.Window):
         win.shape_combine_mask(bitmap, 0, 0)
 
 class ModeButton(gtk.RadioButton):
-    def __init__(self, model, name, group=None, *args, **kwargs):
+    def __init__(self, mode, *args, **kwargs):
         super(ModeButton, self).__init__(*args, **kwargs)
 
-        self.model = model
-        self.mode = name
+        self.mode = mode
 
         self.progress = gtk.ProgressBar()
         self.add(self.progress)
 
         self.set_mode(False)
         self.progress.set_fraction(1.0)
-        self.update_label()
+        self.update_label(mode)
+
+        mode.connect('tick', self.update_label)
 
     def get_text(self):
         return self.progress.get_text()
 
-    def update_label(self):
-        model = self.model.timers[self.mode]
-        remaining = round(model['total'] - model['used'])
+    def update_label(self, mode, delta=None):
+        remaining = round(mode.remaining())
         if remaining >= 0:
             ptime = time.strftime('%H:%M:%S', time.gmtime(remaining))
         else:
             ptime = time.strftime('-%H:%M:%S', time.gmtime(abs(remaining)))
 
-        self.progress.set_text('%s: %s' % (model['name'], ptime))
-        self.progress.set_fraction(max(float(remaining) / model['total'], 0))
+        self.progress.set_text('%s: %s' % (mode.name, ptime))
+        self.progress.set_fraction(max(float(remaining) / mode.total, 0))
 
 class MainWinContextMenu(gtk.Menu):
     def __init__(self, model, *args, **kwargs):
@@ -685,7 +724,7 @@ class MainWin(RoundedWindow):
 
         self.btns = {}
         for name in self.timer.timer_order:
-            btn = ModeButton(model=self.timer, name=name)
+            btn = ModeButton(self.timer.timers[name])
             self.btns[name] = btn
 
             btn.connect('toggled', self.btn_toggled)
@@ -736,9 +775,6 @@ class MainWin(RoundedWindow):
         if widget.get_active():
             self.timer.set_active(widget.mode)
 
-        if not widget.mode:
-            self.timer.save()
-
     def mode_changed(self, model, mode=None):
         btn = self.btns.get(mode)
         if btn and not btn.get_active():
@@ -750,14 +786,11 @@ class MainWin(RoundedWindow):
 
         :todo: Actually use the mode and delta passed in.
         """
-        for name in self.btns:
-            if name: # Exclude "Asleep"
-                self.btns[name].update_label()
         if self.timer.mode:
             #FIXME: Not helpful when overflow kicks in. Rethink.
             # (Maybe fixable with my "don't actually make overflow reset the
             # active timer" change for record-keeping.)
-            self.set_title(self.btns[self.timer.mode['name']].get_text())
+            self.set_title(self.btns[self.timer.mode.name].get_text())
         else:
             self.set_title("Timeclock Paused")
 
@@ -861,23 +894,19 @@ class TimeClock(object):
         for widget in self.timer_widgets:
             timer = self.timer.timers[widget.mode]
             pbar = self.timer_widgets[widget]
-            total, val = timer['total'], timer['used']
-            remaining = round(total - val)
+            remaining = round(timer.remaining())
             if pbar:
                 if remaining >= 0:
                     pbar.set_text(time.strftime('%H:%M:%S', time.gmtime(remaining)))
                 else:
                     pbar.set_text(time.strftime('-%H:%M:%S', time.gmtime(abs(remaining))))
-                pbar.set_fraction(max(float(remaining) / timer['total'], 0))
+                pbar.set_fraction(max(float(remaining) / timer.total, 0))
 
     def btn_toggled(self, widget):
         """Callback for clicking the timer-selection radio buttons"""
         if widget.get_active():
             self.selectedBtn = widget
             self.timer.set_active(widget.mode)
-
-        if not self.selectedBtn.mode:
-            self.timer.save()
 
     def mode_changed(self, model, mode=None):
         mode = mode or 'sleep'
@@ -888,10 +917,10 @@ class TimeClock(object):
     def prefs_clicked(self, widget):
         """Callback for the preferences button"""
         # Set the spin widgets to the current settings.
-        for mode in self.timer.total:
+        for mode in self.timer.timers:
             widget_spin =  'spinBtn_%sMode' % mode.lower()
             widget = self.pTree.get_widget(widget_spin)
-            widget.set_value(self.timer.total[mode] / 3600.0)
+            widget.set_value(self.timer.timers[mode].total / 3600.0)
 
         # Set the notify option to the current value, disable and explain if
         # pynotify is not installed.
@@ -909,10 +938,10 @@ class TimeClock(object):
     def prefs_commit(self, widget):
         """Callback for OKing changes to the preferences"""
         # Update the time settings for each mode.
-        for mode in self.timer.total:
+        for mode in self.timer.timers:
             widget_spin =  'spinBtn_%sMode' % mode.lower()
             widget = self.pTree.get_widget(widget_spin)
-            self.timer.total[mode] = (widget.get_value() * 3600)
+            self.timer.timers[mode].total = (widget.get_value() * 3600)
 
         notify_box = self.pTree.get_widget('checkbutton_notify')
         self.timer.notify = notify_box.get_active()

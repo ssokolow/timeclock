@@ -23,8 +23,8 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
  - Extend the single-instance system to use D-Bus if available to raise/focus
    the existing instance if one is already running.
  - Figure out some intuitive, non-distracting way to allow the user to make
-   corrections. (eg. if you forget to set the timer to leisure before going AFK)
- - Should I offer preferences options for remembering window position and things
+   corrections. (eg. you forgot to set the timer to leisure before going AFK)
+ - Should I offer preferences options for remembering window position and such
    like "always on top" and "on all desktops"?
  - Have the system complain if overhead + work + leisure + sleep (8 hours) > 24
    and enforce minimums of 1 hour for leisure and overhead.
@@ -48,7 +48,7 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
 
 @todo: Consider:
  - Changing this into a Plasma widget (Without dropping PyGTK support)
- - Using PyKDE's bindings to the KDE Notification system (for the Plasma widget)
+ - Using PyKDE bindings to the KDE Notification system (for the Plasma widget)
  - Look into integrating with http://projecthamster.wordpress.com/
 
 @todo: Publish this on listing sites:
@@ -87,31 +87,35 @@ default_timers = [
 import copy, logging, os, signal, sys, tempfile, time, pickle
 
 SELF_DIR = os.path.dirname(os.path.realpath(__file__))
-DATA_DIR = os.environ.get('XDG_DATA_HOME', os.path.expanduser('~/.local/share'))
+DATA_DIR = os.environ.get('XDG_DATA_HOME',
+        os.path.expanduser('~/.local/share'))
+SAVE_FILE = os.path.join(DATA_DIR, "timeclock.sav")
+
 if not os.path.isdir(DATA_DIR):
     try:
         os.makedirs(DATA_DIR)
     except OSError:
         raise SystemExit("Aborting: %s exists but is not a directory!"
                                % DATA_DIR)
-SAVE_FILE = os.path.join(DATA_DIR, "timeclock.sav")
+
 SAVE_INTERVAL = 60 * 5  # 5 Minutes
 SLEEP_RESET_INTERVAL = 3600 * 6  # 6 hours
 NOTIFY_INTERVAL = 60 * 15 # 15 Minutes
-NOTIFY_SOUND = os.path.join(os.path.dirname(os.path.realpath(__file__)), '49213__tombola__Fisher_Price29.wav')
+
+NOTIFY_SOUND = os.path.join(
+        os.path.dirname(os.path.realpath(__file__)),
+        '49213__tombola__Fisher_Price29.wav')
+
 DEFAULT_UI_LIST = ['compact', 'legacy']
 DEFAULT_NOTIFY_LIST = ['audio', 'libnotify']
 file_exists = os.path.isfile
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
-#TODO: What was I trying to do here?
-# (I get the feeling this try/except neutralizes every use of pygtk.require
-# except switching between different available versions)
 try:
     import pygtk
     pygtk.require("2.0")
-except:
+except ImportError:
     pass
 
 import cairo, gtk, gobject
@@ -120,14 +124,15 @@ import gtk.glade
 import gtkexcepthook
 
 # Known generated icon sizes.
-ICON_SIZES = [16,22,32,48,64]
+ICON_SIZES = [16, 22, 32, 48, 64]
 def get_icon_path(size):
     for icon_size in sorted(ICON_SIZES, reverse=True):
         if icon_size <= size:
             size = icon_size
             break
 
-    return os.path.join(SELF_DIR, "icons", "timeclock_%dx%d.png" % (size, size))
+    return os.path.join(SELF_DIR, "icons",
+            "timeclock_%dx%d.png" % (size, size))
 
 class SingleInstance:
     """http://stackoverflow.com/questions/380870/python-single-instance-of-program/1265445#1265445"""
@@ -156,7 +161,8 @@ class SingleInstance:
                 # According to TechNet, TEMP/TMP are already user-scoped.
                 self.lockfile = os.path.join(tempfile.gettempdir(), fname)
             else:
-                base = os.environ.get('XDG_CACHE_HOME', os.path.expanduser('~/.cache'))
+                base = os.environ.get('XDG_CACHE_HOME',
+                        os.path.expanduser('~/.cache'))
                 self.lockfile = os.path.join(base, fname)
 
                 if not os.path.exists(base):
@@ -165,31 +171,32 @@ class SingleInstance:
         self.lockfile = os.path.normpath(os.path.normcase(self.lockfile))
 
         if self.platform == 'win32': #TODO: What about Win64? os.name == 'nt'?
-                try:
-                        # file already exists, we try to remove (in case previous execution was interrupted)
-                        if(os.path.exists(self.lockfile)):
-                                os.unlink(self.lockfile)
-                        self.fd =  os.open(self.lockfile, os.O_CREAT|os.O_EXCL|os.O_RDWR)
-                except OSError, e:
-                        if e.errno == 13:
-                                print "Another instance is already running, quitting."
-                                _sys.exit(-1)
-                        print e.errno
-                        raise
+            try:
+                # file already exists, we try to remove
+                # (in case previous execution was interrupted)
+                if(os.path.exists(self.lockfile)):
+                    os.unlink(self.lockfile)
+                self.fd = os.open(self.lockfile, os.O_CREAT|os.O_EXCL|os.O_RDWR)
+            except OSError, e:
+                if e.errno == 13:
+                    print "Another instance is already running, quitting."
+                    _sys.exit(-1)
+                print e.errno
+                raise
         else: # non Windows
-                import fcntl
-                self.fp = open(self.lockfile, 'w')
-                try:
-                        fcntl.lockf(self.fp, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                except IOError:
-                        print "Another instance is already running, quitting."
-                        _sys.exit(-1)
+            import fcntl
+            self.fp = open(self.lockfile, 'w')
+            try:
+                fcntl.lockf(self.fp, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except IOError:
+                print "Another instance is already running, quitting."
+                _sys.exit(-1)
 
     def __del__(self):
         if self.platform == 'win32':
-                if hasattr(self, 'fd'):
-                        os.close(self.fd)
-                        os.unlink(self.lockfile)
+            if hasattr(self, 'fd'):
+                os.close(self.fd)
+                os.unlink(self.lockfile)
 
 #{ Model stuff
 
@@ -236,8 +243,8 @@ CURRENT_SAVE_VERSION = 6 #: Used for save file versioning
 class TimerModel(gobject.GObject):
     """Model class which still needs more refactoring."""
     __gsignals__ = {
-        'mode-changed': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (Mode, )),
-        'notify_tick': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (Mode, )),
+        'mode-changed': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (Mode,)),
+        'notify_tick': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (Mode,)),
         'tick': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (Mode, float))
     }
 
@@ -313,10 +320,10 @@ class TimerModel(gobject.GObject):
                     notify = True
                     #win_state = {}
                 else:
-                    raise ValueError("Save file too new! (Expected %s, got %s)" % (CURRENT_SAVE_VERSION, version))
+                    raise ValueError("Save file too new! (Expected %s, got %s)"
+                            % (CURRENT_SAVE_VERSION, version))
 
                 if version <= 4:
-                    SLEEP, OVERHEAD, WORK, LEISURE = range(4)
                     MODE_NAMES = (None, 'Overhead', 'Work', 'Leisure')
 
                     timers = []
@@ -429,7 +436,8 @@ class TimerController(gobject.GObject):
                     mode.used = mode.total
                     overflow_to.tick(overtime)
 
-                #TODO: Decide how best to ensure notifications fire immediately on expiry.
+                #TODO: Decide how best to ensure notifications fire immediately
+                # on expiry.
                 if notify_delta > 900:
                     self.model.notify_tick()
                     self.last_notify = now
@@ -537,7 +545,8 @@ class LibNotifyNotifier(gobject.GObject):
         for mode in model.timers:
             notification = pynotify.Notification(
                 "%s Time Exhausted" % mode,
-                "You have used all allotted time for %s" % xmlescape(mode.lower()),
+                "You have used all allotted time for %s" %
+                    xmlescape(mode.lower()),
                 get_icon_path(48))
             notification.set_urgency(pynotify.URGENCY_NORMAL)
             notification.set_timeout(pynotify.EXPIRES_NEVER)
@@ -547,13 +556,13 @@ class LibNotifyNotifier(gobject.GObject):
             model.timers[mode].connect('notify-tick', self.notify_exhaustion)
 
     def notify_exhaustion(self, mode):
-        """Display a libnotify notification that the given timer has expired."""
+        """Display a libnotify notification that the given timer has expired"""
         self.notifications[mode.name].show()
 
 class AudioNotifier(gobject.GObject):
-    """An auditory timer expiry notification based on a portability layer."""
+    """An audio timer expiry notification based on a portability layer."""
     def __init__(self, model):
-        # Keep "import gst" from grabbing --help, printing its own help, and exiting
+        # Keep "import gst" from grabbing --help, showing its help, and exiting
         _argv, sys.argv = sys.argv, []
 
         try:
@@ -561,7 +570,7 @@ class AudioNotifier(gobject.GObject):
             import urllib
         finally:
             # Restore sys.argv so I can parse it cleanly.
-            # XXX: Use a context manager once I decide to drop Python 2.4 support.
+            # XXX: Use a context manager once I drop Python 2.4 support.
             sys.argv = _argv
 
         self.gst = gst
@@ -571,13 +580,14 @@ class AudioNotifier(gobject.GObject):
         self.uri = NOTIFY_SOUND
 
         if os.path.exists(self.uri):
-            self.uri = 'file://' + urllib.pathname2url(os.path.abspath(self.uri))
+            self.uri = 'file://' + urllib.pathname2url(
+                    os.path.abspath(self.uri))
         self.bin = gst.element_factory_make("playbin")
         self.bin.set_property("uri", self.uri)
 
         model.connect('notify-tick', self.notify_exhaustion)
 
-        #TODO: Fall back to using winsound or wave and ossaudiodev or maybe pygame
+        #TODO: Fall back to using winsound or wave+ossaudiodev or maybe pygame
         #TODO: Design a generic wrapper which also tries things like these:
         # - http://stackoverflow.com/questions/276266/whats-a-cross-platform-way-to-play-a-sound-file-in-python
         # - http://stackoverflow.com/questions/307305/play-a-sound-with-python
@@ -613,18 +623,18 @@ class RoundedWindow(gtk.Window):
           F****E
         """
 
-        cr.move_to(x+r,y)                      # Move to A
-        cr.line_to(x+w-r,y)                    # Straight line to B
-        cr.curve_to(x+w,y,x+w,y,x+w,y+r)       # Curve to C, Control points are both at Q
-        cr.line_to(x+w,y+h-r)                  # Move to D
-        cr.curve_to(x+w,y+h,x+w,y+h,x+w-r,y+h) # Curve to E
-        cr.line_to(x+r,y+h)                    # Line to F
-        cr.curve_to(x,y+h,x,y+h,x,y+h-r)       # Curve to G
-        cr.line_to(x,y+r)                      # Line to H
-        cr.curve_to(x,y,x,y,x+r,y)             # Curve to A
+        cr.move_to(x+r, y)                          # Move to A
+        cr.line_to(x+w-r, y)                        # Straight line to B
+        cr.curve_to(x+w, y, x+w,y, x+w, y+r)        # Curve to C, Ctrl pts at Q
+        cr.line_to(x+w, y+h-r)                      # Move to D
+        cr.curve_to(x+w, y+h, x+w, y+h, x+w-r, y+h) # Curve to E
+        cr.line_to(x+r, y+h)                        # Line to F
+        cr.curve_to(x, y+h, x, y+h, x, y+h-r)       # Curve to G
+        cr.line_to(x, y+r)                          # Line to H
+        cr.curve_to(x, y, x, y, x+r, y)             # Curve to A
 
     def _on_size_allocate(self, win, allocation):
-        w,h = allocation.width, allocation.height
+        w, h = allocation.width, allocation.height
         bitmap = gtk.gdk.Pixmap(None, w, h, 1)
         cr = bitmap.cairo_create()
 
@@ -693,7 +703,8 @@ class MainWinContextMenu(gtk.Menu):
         quit.connect('activate', gtk.main_quit)
 
     def cb_reset(self, widget):
-        #TODO: Look into how to get MainWin via parent-lookup calls so this can be destroyed with its parent.
+        #TODO: Look into how to get MainWin via parent-lookup calls so
+        # this can be destroyed with its parent.
         confirm = gtk.MessageDialog(type=gtk.MESSAGE_WARNING,
                 buttons=gtk.BUTTONS_OK_CANCEL,
                 message_format="Reset all timers?\n"
@@ -757,8 +768,9 @@ class MainWin(RoundedWindow):
         self.menu.show_all() #TODO: Is this line necessary?
         self.show_all()
 
-        # Set the icon after we know how much vert space the GTK+ theme gives us.
-        drag_handle.set_from_file(get_icon_path(drag_handle.get_allocation()[3]))
+        # Set the icon after we know how much vert space the GTK theme gives us
+        drag_handle.set_from_file(get_icon_path(
+            drag_handle.get_allocation()[3]))
 
     #TODO: Normalize callback naming
     def btn_toggled(self, widget):
@@ -856,7 +868,8 @@ class TimeClock(object):
         sleepBtn.mode = None
 
         if self.timer.mode:
-            self.selectedBtn = self.mTree.get_widget('btn_%sMode' % self.timer.mode.name.lower())
+            mode_name = self.timer.mode.name.lower()
+            self.selectedBtn = self.mTree.get_widget('btn_%sMode' % mode_name)
         else:
             self.selectedBtn = sleepBtn
         self.selectedBtn.set_active(True)
@@ -868,7 +881,8 @@ class TimeClock(object):
         sleepBtn.set_property('draw-indicator', False)
 
     def cb_reset(self, widget):
-        #TODO: Look into how to get MainWin via parent-lookup calls so this can be destroyed with its parent.
+        #TODO: Look into how to get MainWin via parent-lookup calls so this
+        # can be destroyed with its parent.
         confirm = gtk.MessageDialog(type=gtk.MESSAGE_WARNING,
                 buttons=gtk.BUTTONS_OK_CANCEL,
                 message_format="Reset all timers?\n"
@@ -888,9 +902,11 @@ class TimeClock(object):
             remaining = round(timer.remaining())
             if pbar:
                 if remaining >= 0:
-                    pbar.set_text(time.strftime('%H:%M:%S', time.gmtime(remaining)))
+                    pbar.set_text(time.strftime('%H:%M:%S',
+                        time.gmtime(remaining)))
                 else:
-                    pbar.set_text(time.strftime('-%H:%M:%S', time.gmtime(abs(remaining))))
+                    pbar.set_text(time.strftime('-%H:%M:%S',
+                        time.gmtime(abs(remaining))))
                 pbar.set_fraction(max(float(remaining) / timer.total, 0))
 
     def btn_toggled(self, widget):
@@ -985,8 +1001,8 @@ def main():
 
     keepalive = []
     keepalive.append(SingleInstance(lockname=lockname))
-    # This two-line definition shuts PyFlakes up about "assigned but never used"
-    # Stuff beyond this point only runs if no other instance is already running.
+    # This two-line definition shuts PyFlakes up about "assigned but not used"
+    # Stuff beyond this point only runs if no other instance is already running
 
     gtkexcepthook.enable()
 
@@ -1005,7 +1021,8 @@ def main():
         try:
             KNOWN_NOTIFY_MAP[name](timer)
         except ImportError:
-            logging.warn("Could not initialize notifier %s due to unsatisfied dependencies.", name)
+            logging.warn("Could not initialize notifier %s due to unsatisfied "
+                         "dependencies.", name)
         else:
             logging.info("Successfully instantiated notifier: %s", name)
 
@@ -1016,13 +1033,14 @@ def main():
         try:
             KNOWN_UI_MAP[name](timer)
         except ImportError:
-            logging.warn("Could not initialize UI %s due to unsatisfied dependencies.", name)
+            logging.warn("Could not initialize UI %s due to unsatisfied "
+                         "dependencies.", name)
         else:
             logging.info("Successfully instantiated UI: %s", name)
 
     #TODO: Split out the PyNotify parts into a separate view(?) module.
     #TODO: Write up an audio notification view(?) module.
-    #TODO: Explore adding a "set urgent hint" call on the same interval as these.
+    #TODO: Try adding a "set urgent hint" call on the same interval as these.
 
     # Save state on exit
     sys.exitfunc = timer.save

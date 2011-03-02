@@ -194,7 +194,6 @@ class SingleInstance:
 
 #{ Model stuff
 
-#TODO: Implement this.
 class Mode(gobject.GObject):
     """Data and operations for a timer mode"""
     __gsignals__ = {
@@ -234,8 +233,8 @@ CURRENT_SAVE_VERSION = 6 #: Used for save file versioning
 class TimerModel(gobject.GObject):
     """Model class which still needs more refactoring."""
     __gsignals__ = {
-        'mode-changed': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (str, )),
-        'tick': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (str, float))
+        'mode-changed': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (Mode, )),
+        'tick': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (Mode, float))
     }
 
     def __init__(self, start_mode=None, save_file=SAVE_FILE):
@@ -252,7 +251,7 @@ class TimerModel(gobject.GObject):
     def tick(self, delta=0):
         if self.mode:
             self.mode.tick(delta)
-            self.emit('tick', self.mode.name, delta)
+            self.emit('tick', self.mode, delta)
 
     def reset(self):
         """Reset all timers to starting values"""
@@ -341,7 +340,7 @@ class TimerModel(gobject.GObject):
         #XXX: Decide how to properly handle the Asleep case.
         self._mode = mode
         self.save()
-        self.emit('mode-changed', getattr(mode, 'name', None))
+        self.emit('mode-changed', mode)
     mode = property(_get_mode, _set_mode)
 
     def remaining(self, mode=None):
@@ -534,16 +533,16 @@ class LibNotifyNotifier(gobject.GObject):
 
     def tick(self, model, mode, delta):
         #TODO: This should be more elegant (Probably make modes objects)
-        if not model.mode: #TODO: Make modes objects so I can do this properly.
+        if not mode: #TODO: Make modes objects so I can do this properly.
             return
-        if model.remaining() > 0:
+        if mode.remaining() > 0:
             return
         else:
-            overflow_to = model.timers.get(model.mode.overflow)
-            if overflow_to and model.remaining(overflow_to) <= 0:
+            overflow_to = model.timers.get(mode.overflow)
+            if overflow_to and overflow_to.remaining() <= 0:
                 self.notify_exhaustion(overflow_to)
-            elif model.remaining() <= 0:
-                self.notify_exhaustion(model.mode)
+            elif mode.remaining() <= 0:
+                self.notify_exhaustion(mode)
 
     def notify_exhaustion(self, mode):
         """Display a libnotify notification that the given timer has expired."""
@@ -589,10 +588,10 @@ class AudioNotifier(gobject.GObject):
         # - http://stackoverflow.com/questions/307305/play-a-sound-with-python
 
     def tick(self, model, mode, delta):
-        if not model.mode: #TODO: Make modes objects so I can do this properly.
+        if not mode: #TODO: Make modes objects so I can do this properly.
             return
         now = time.time()
-        if model.remaining() <= 0 and self.last_notified + 900 < now:
+        if mode.remaining() <= 0 and self.last_notified + 900 < now:
             #TODO: Did I really need to do this?
             self.bin.set_state(self.gst.STATE_NULL)
             self.bin.set_state(self.gst.STATE_PLAYING)
@@ -777,8 +776,8 @@ class MainWin(RoundedWindow):
         if widget.get_active():
             self.timer.mode = widget.mode
 
-    def mode_changed(self, model, mode=None):
-        btn = self.btns.get(mode)
+    def mode_changed(self, model, mode):
+        btn = self.btns.get(mode.name)
         if btn and not btn.get_active():
             btn.set_active(True)
         self.update(model)
@@ -910,8 +909,8 @@ class TimeClock(object):
             self.selectedBtn = widget
             self.timer.mode = widget.mode
 
-    def mode_changed(self, model, mode=None):
-        mode = mode or 'sleep'
+    def mode_changed(self, model, mode):
+        mode = mode.name or 'sleep'
         btn = self.mTree.get_widget('btn_%sMode' % mode.lower())
         if btn and not btn.get_active():
             btn.set_active(True)

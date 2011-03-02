@@ -247,7 +247,7 @@ class TimerModel(gobject.GObject):
         self.notify = True
         self.timer_order = [x['name'] for x in default_timers]
         self.timers = dict((x['name'], Mode(**x)) for x in default_timers)
-        self.mode = self.timers.get(start_mode, None)
+        self._mode = self.timers.get(start_mode, None)
 
     def tick(self, delta=0):
         if self.mode:
@@ -258,7 +258,7 @@ class TimerModel(gobject.GObject):
         """Reset all timers to starting values"""
         for timer in self.timers.values():
             timer.reset()
-        self.set_active(None)
+        self.mode = None
 
     def load(self):
         """Load the save file if present. Log and start clean otherwise."""
@@ -335,6 +335,15 @@ class TimerModel(gobject.GObject):
             self.timers = dict((x['name'], Mode(**x)) for x in timers)
             self.tick(0)
 
+    def _get_mode(self):
+        return self._mode
+    def _set_mode(self, mode):
+        #XXX: Decide how to properly handle the Asleep case.
+        self._mode = mode
+        self.save()
+        self.emit('mode-changed', getattr(mode, 'name', None))
+    mode = property(_get_mode, _set_mode)
+
     def remaining(self, mode=None):
         mode = mode or self.mode
         if not mode: #TODO: Make asleep an object so I don't need this.
@@ -373,15 +382,6 @@ class TimerModel(gobject.GObject):
         self.last_save = time.time()
         return True
 
-    def get_active(self):
-        return self.mode
-
-    def set_active(self, mode):
-        #XXX: Decide how to properly handle the Asleep case.
-        self.mode = mode
-        self.save()
-        self.emit('mode-changed', getattr(mode, 'name', None))
-
 #{ Controller Modules
 
 class TimerController(gobject.GObject):
@@ -399,7 +399,7 @@ class TimerController(gobject.GObject):
         :note: Emitted 'tick' signal is not exclusively for incrementing the
         the clock display. Examine how much time has actually elapsed.
         """
-        now, mode = time.time(), self.model.get_active()
+        now, mode = time.time(), self.model.mode
         if mode:
             delta = now - self.last_tick
             mode.used += delta
@@ -775,7 +775,7 @@ class MainWin(RoundedWindow):
     def btn_toggled(self, widget):
         """Callback for clicking the timer-selection radio buttons"""
         if widget.get_active():
-            self.timer.set_active(widget.mode)
+            self.timer.mode = widget.mode
 
     def mode_changed(self, model, mode=None):
         btn = self.btns.get(mode)
@@ -908,7 +908,7 @@ class TimeClock(object):
         """Callback for clicking the timer-selection radio buttons"""
         if widget.get_active():
             self.selectedBtn = widget
-            self.timer.set_active(widget.mode)
+            self.timer.mode = widget.mode
 
     def mode_changed(self, model, mode=None):
         mode = mode or 'sleep'

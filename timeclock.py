@@ -14,7 +14,6 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
 @todo: Planned improvements:
  - Split "mode" into "selected" and "active" for a generalized version of the
    (pressed button vs. title displayed in taskbar) distinction.
- - Make my API for getters and setters use property() instead.
  - Decide how overflow should behave if the target timer is out too.
  - Double-check that it still works on Python 2.4.
  - Fixing setting up a decent MVC-ish archtecture using GObject signals.
@@ -197,7 +196,8 @@ class SingleInstance:
 class Mode(gobject.GObject):
     """Data and operations for a timer mode"""
     __gsignals__ = {
-        'tick': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (float,))
+        'tick': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (float,)),
+        'notify-tick': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, ())
     }
 
     def __init__(self, name, total, used=0, overflow=None):
@@ -229,11 +229,15 @@ class Mode(gobject.GObject):
     def tick(self, delta=0):
         self.emit('tick', delta)
 
+    def notify_tick(self):
+        self.emit('notify-tick')
+
 CURRENT_SAVE_VERSION = 6 #: Used for save file versioning
 class TimerModel(gobject.GObject):
     """Model class which still needs more refactoring."""
     __gsignals__ = {
         'mode-changed': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (Mode, )),
+        'notify_tick': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (Mode, )),
         'tick': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (Mode, float))
     }
 
@@ -252,6 +256,11 @@ class TimerModel(gobject.GObject):
         if self.mode:
             self.mode.tick(delta)
             self.emit('tick', self.mode, delta)
+
+    def notify_tick(self):
+        if self.mode:
+            self.mode.notify_tick()
+            self.emit('notify-tick', self.mode)
 
     def reset(self):
         """Reset all timers to starting values"""
@@ -390,6 +399,7 @@ class TimerController(gobject.GObject):
 
         self.model = model
         self.last_tick = time.time()
+        self.last_notify = 0
         gobject.timeout_add(1000, self.tick)
 
     def tick(self):
@@ -401,6 +411,7 @@ class TimerController(gobject.GObject):
         now, mode = time.time(), self.model.mode
         if mode:
             delta = now - self.last_tick
+            notify_delta = now - self.last_notify
             mode.used += delta
 
             if mode.remaining() < 0:
@@ -418,6 +429,11 @@ class TimerController(gobject.GObject):
                     mode.used = mode.total
                     overflow_to.tick(overtime)
 
+                #TODO: Decide how best to ensure notifications fire immediately on expiry.
+                if notify_delta > 900:
+                    self.model.notify_tick()
+                    self.last_notify = now
+
             #TODO: Rework overtime calculation so this is proper.
             self.model.tick(delta)
 
@@ -425,8 +441,8 @@ class TimerController(gobject.GObject):
                 self.model.save()
 
         self.last_tick = now
-        return True
 
+        return True
 
 class IdleController(gobject.GObject):
     """A controller to automatically reset the timer if you fall asleep."""
@@ -455,7 +471,6 @@ class IdleController(gobject.GObject):
                     self.cb_xcb_response)
 
             model.connect('tick', self.cb_tick)
-
 
     def __del__(self):
         self._source_remove(self.watch_id)
@@ -529,29 +544,11 @@ class LibNotifyNotifier(gobject.GObject):
             notification.last_shown = 0
             self.notifications[mode] = notification
 
-        model.connect('tick', self.tick)
-
-    def tick(self, model, mode, delta):
-        #TODO: This should be more elegant (Probably make modes objects)
-        if not mode: #TODO: Make modes objects so I can do this properly.
-            return
-        if mode.remaining() > 0:
-            return
-        else:
-            overflow_to = model.timers.get(mode.overflow)
-            if overflow_to and overflow_to.remaining() <= 0:
-                self.notify_exhaustion(overflow_to)
-            elif mode.remaining() <= 0:
-                self.notify_exhaustion(mode)
+            model.timers[mode].connect('notify-tick', self.notify_exhaustion)
 
     def notify_exhaustion(self, mode):
         """Display a libnotify notification that the given timer has expired."""
-        #TODO: Probably more elegant to put the time check in tick()
-        notification = self.notifications[mode.name]
-        now = time.time()
-        if notification.last_shown + 900 < now:
-            notification.last_shown = now
-            notification.show()
+        self.notifications[mode.name].show()
 
 class AudioNotifier(gobject.GObject):
     """An auditory timer expiry notification based on a portability layer."""
@@ -566,7 +563,6 @@ class AudioNotifier(gobject.GObject):
             # Restore sys.argv so I can parse it cleanly.
             # XXX: Use a context manager once I decide to drop Python 2.4 support.
             sys.argv = _argv
-            del _argv
 
         self.gst = gst
         self.__gobject_init__()
@@ -579,23 +575,17 @@ class AudioNotifier(gobject.GObject):
         self.bin = gst.element_factory_make("playbin")
         self.bin.set_property("uri", self.uri)
 
-        if model:
-            model.connect('tick', self.tick)
+        model.connect('notify-tick', self.notify_exhaustion)
 
         #TODO: Fall back to using winsound or wave and ossaudiodev or maybe pygame
         #TODO: Design a generic wrapper which also tries things like these:
         # - http://stackoverflow.com/questions/276266/whats-a-cross-platform-way-to-play-a-sound-file-in-python
         # - http://stackoverflow.com/questions/307305/play-a-sound-with-python
 
-    def tick(self, model, mode, delta):
-        if not mode: #TODO: Make modes objects so I can do this properly.
-            return
-        now = time.time()
-        if mode.remaining() <= 0 and self.last_notified + 900 < now:
-            #TODO: Did I really need to do this?
-            self.bin.set_state(self.gst.STATE_NULL)
-            self.bin.set_state(self.gst.STATE_PLAYING)
-            self.last_notified = now
+    def notify_exhaustion(self, model, mode=None):
+        #TODO: Did I really need to do this?
+        self.bin.set_state(self.gst.STATE_NULL)
+        self.bin.set_state(self.gst.STATE_PLAYING)
 
 KNOWN_NOTIFY_MAP = {
         'audio': AudioNotifier,

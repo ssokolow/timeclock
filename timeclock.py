@@ -126,6 +126,7 @@ import gtkexcepthook
 # Known generated icon sizes.
 ICON_SIZES = [16, 22, 32, 48, 64]
 def get_icon_path(size):
+    """Return the path to the largest Timeclock icon which fits in ``size``."""
     for icon_size in sorted(ICON_SIZES, reverse=True):
         if icon_size <= size:
             size = icon_size
@@ -176,7 +177,8 @@ class SingleInstance:
                 # (in case previous execution was interrupted)
                 if(os.path.exists(self.lockfile)):
                     os.unlink(self.lockfile)
-                self.fd = os.open(self.lockfile, os.O_CREAT|os.O_EXCL|os.O_RDWR)
+                self.fd = os.open(self.lockfile,
+                        os.O_CREAT|os.O_EXCL|os.O_RDWR)
             except OSError, e:
                 if e.errno == 13:
                     print "Another instance is already running, quitting."
@@ -209,12 +211,15 @@ def signalled_property(propname, signal_name):
     :type signal_name: str
     """
     def pget(self):
-      return getattr(self, propname)
+        """Default getter"""
+        return getattr(self, propname)
     def pset(self, value):
-      setattr(self, propname, value)
-      self.emit(signal_name)
+        """Default setter plus signal emit"""
+        setattr(self, propname, value)
+        self.emit(signal_name)
     def pdel(self):
-      delattr(self, propname)
+        """Default deleter"""
+        delattr(self, propname)
 
     return property(pget, pset, pdel)
 
@@ -379,6 +384,7 @@ class TimerModel(gobject.GObject):
             self.timers = dict((x['name'], Mode(**x)) for x in timers)
             #TODO: I need some way to trigger a re-build of the view's signal bindings.
 
+    #TODO: Reimplement using signalled_property and a signal connect.
     def _get_mode(self):
         return self._mode
     def _set_mode(self, mode):
@@ -623,6 +629,7 @@ KNOWN_NOTIFY_MAP = {
 #{ UI Components
 
 class RoundedWindow(gtk.Window):
+    """Undecorated gtk.Window with rounded corners."""
     def __init__(self):
         gtk.Window.__init__(self)
         self.connect('size-allocate', self._on_size_allocate)
@@ -671,6 +678,7 @@ class RoundedWindow(gtk.Window):
         win.shape_combine_mask(bitmap, 0, 0)
 
 class ModeButton(gtk.RadioButton):
+    """Compact progress-button representing a timer mode."""
     def __init__(self, mode, *args, **kwargs):
         super(ModeButton, self).__init__(*args, **kwargs)
 
@@ -693,6 +701,7 @@ class ModeButton(gtk.RadioButton):
         self.progress.set_fraction(max(float(mode.remaining()) / mode.total, 0))
 
 class MainWinContextMenu(gtk.Menu):
+    """Context menu for `MainWinCompact`"""
     def __init__(self, model, *args, **kwargs):
         super(MainWinContextMenu, self).__init__(*args, **kwargs)
         self.model = model
@@ -726,6 +735,7 @@ class MainWinContextMenu(gtk.Menu):
         confirm.destroy()
 
 class MainWin(RoundedWindow):
+    """Compact UI suitable for overlaying on titlebars"""
     def __init__(self, timer):
         super(MainWin, self).__init__()
         self.set_icon_from_file(get_icon_path(64))
@@ -974,14 +984,15 @@ def main():
                       metavar="MODE", help="start in MODE. (Use 'help' for a list)")
     parser.add_option('--ui',
                       action="append", dest="interfaces", default=[],
-                      type='choice', choices=KNOWN_UI_MAP.keys(), metavar="NAME",
+                      type='choice', choices=KNOWN_UI_MAP.keys(),
+                      metavar="NAME",
                       help="Launch the specified UI instead of the default. "
                       "May be specified multiple times for multiple UIs.")
     parser.add_option('--notifier',
                       action="append", dest="notifiers", default=[],
                       type='choice', choices=KNOWN_NOTIFY_MAP.keys(), metavar="NAME",
                       help="Activate the specified notification method. "
-                      "May be specified multiple times for multiple notifiers.")
+                      "May be specified several times for multiple notifiers.")
     parser.add_option('--develop',
                       action="store_true", dest="develop", default=False,
                       help="Use separate data store and single instance lock"

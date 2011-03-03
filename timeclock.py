@@ -200,20 +200,43 @@ class SingleInstance:
 
 #{ Model stuff
 
+def signalled_property(propname, signal_name):
+    """Use property() to automatically emit a GObject signal on modification.
+
+    :param propname: The name of the private member to back the property with.
+    :param signal_name: The name of the GObject signal to emit.
+    :type propname: str
+    :type signal_name: str
+    """
+    def pget(self):
+      return getattr(self, propname)
+    def pset(self, value):
+      setattr(self, propname, value)
+      self.emit(signal_name)
+    def pdel(self):
+      delattr(self, propname)
+
+    return property(pget, pset, pdel)
+
 class Mode(gobject.GObject):
     """Data and operations for a timer mode"""
     __gsignals__ = {
-        'tick': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (float,)),
-        'notify-tick': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, ())
+        'notify-tick': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, ()),
+        'updated': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, ())
     }
+
+    name = signalled_property('_name', 'updated')
+    total = signalled_property('_total', 'updated')
+    used = signalled_property('_used', 'updated')
+    overflow = signalled_property('_overflow', 'updated')
 
     def __init__(self, name, total, used=0, overflow=None):
         self.__gobject_init__()
 
-        self.name = name
-        self.total = total
-        self.used = used
-        self.overflow = overflow
+        self._name = name
+        self._total = total
+        self._used = used
+        self._overflow = overflow
 
     def __str__(self):
         remaining = round(self.remaining())
@@ -231,7 +254,6 @@ class Mode(gobject.GObject):
     def reset(self):
         """Reset the timer and update listeners."""
         self.used = 0
-        self.emit('tick', 0)
 
     def save(self):
         """Serialize into a dict that can be used with __init__."""
@@ -242,9 +264,6 @@ class Mode(gobject.GObject):
                 'overflow': self.overflow,
             }
 
-    def tick(self, delta=0):
-        self.emit('tick', delta)
-
     def notify_tick(self):
         self.emit('notify-tick')
 
@@ -254,7 +273,7 @@ class TimerModel(gobject.GObject):
     __gsignals__ = {
         'mode-changed': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (Mode,)),
         'notify_tick': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (Mode,)),
-        'tick': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (Mode, float))
+        'updated': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, ())
     }
 
     def __init__(self, start_mode=None, save_file=SAVE_FILE):
@@ -268,10 +287,11 @@ class TimerModel(gobject.GObject):
         self.timers = dict((x['name'], Mode(**x)) for x in default_timers)
         self._mode = self.timers.get(start_mode, None)
 
-    def tick(self, delta=0):
-        if self.mode:
-            self.mode.tick(delta)
-            self.emit('tick', self.mode, delta)
+        for mode in self.timers.values():
+            mode.connect('updated', self.updated)
+
+    def updated(self, mode):
+        self.emit('updated')
 
     def notify_tick(self):
         if self.mode:
@@ -357,7 +377,7 @@ class TimerModel(gobject.GObject):
 
             self.timer_order = [x['name'] for x in timers]
             self.timers = dict((x['name'], Mode(**x)) for x in timers)
-            self.tick(0)
+            #TODO: I need some way to trigger a re-build of the view's signal bindings.
 
     def _get_mode(self):
         return self._mode
@@ -419,11 +439,7 @@ class TimerController(gobject.GObject):
         gobject.timeout_add(1000, self.tick)
 
     def tick(self):
-        """Callback for updating progress bars.
-
-        :note: Emitted 'tick' signal is not exclusively for incrementing the
-        the clock display. Examine how much time has actually elapsed.
-        """
+        """Callback for updating progress bars."""
         now, mode = time.time(), self.model.mode
         if mode:
             delta = now - self.last_tick
@@ -438,21 +454,14 @@ class TimerController(gobject.GObject):
                     # record-keeping. (Maybe an additional field to track
                     # overflowed time so I can drain "total" rather than "used"
                     # without messing up stored settings)
-                    overflow_to.used += overtime
-                    # This works because overtime keeps getting reset to zero.
-
-                if overflow_to:
                     mode.used = mode.total
-                    overflow_to.tick(overtime)
+                    overflow_to.used += overtime
 
                 #TODO: Decide how best to ensure notifications fire immediately
                 # on expiry.
                 if notify_delta > 900:
                     self.model.notify_tick()
                     self.last_notify = now
-
-            #TODO: Rework overtime calculation so this is proper.
-            self.model.tick(delta)
 
             if now >= (self.model.last_save + SAVE_INTERVAL):
                 self.model.save()
@@ -487,13 +496,13 @@ class IdleController(gobject.GObject):
                     gobject.IO_IN | gobject.IO_PRI,
                     self.cb_xcb_response)
 
-            model.connect('tick', self.cb_tick)
+            model.connect('updated', self.cb_updated)
 
     def __del__(self):
         self._source_remove(self.watch_id)
         self.conn.disconnect()
 
-    def cb_tick(self, model, mode, delta):
+    def cb_updated(self, model):
         now = time.time()
         if self.last_tick + 60 < now:
             self.last_tick = now
@@ -505,8 +514,8 @@ class IdleController(gobject.GObject):
             # We don't need to check self.model.mode because asleep stops
             # the timer from ticking, but let's be safe and give find
             # the opportunity to pick this up if I rework it.
-            if idle_secs >= SLEEP_RESET_INTERVAL and self.model.mode:
-                self.model.reset()
+            if idle_secs >= SLEEP_RESET_INTERVAL and model:
+                model.reset()
 
     def cb_xcb_response(self, source, condition):
         """Accept and discard X events to prevent any risk of a frozen
@@ -674,12 +683,12 @@ class ModeButton(gtk.RadioButton):
         self.progress.set_fraction(1.0)
         self.update_label(mode)
 
-        mode.connect('tick', self.update_label)
+        mode.connect('updated', self.update_label)
 
     def get_text(self):
         return self.progress.get_text()
 
-    def update_label(self, mode, delta=None):
+    def update_label(self, mode):
         self.progress.set_text(str(mode))
         self.progress.set_fraction(max(float(mode.remaining()) / mode.total, 0))
 
@@ -761,13 +770,13 @@ class MainWin(RoundedWindow):
         self.set_keep_above(True)
         self.stick()
 
-        self.timer.connect('tick', self.update)
+        self.timer.connect('updated', self.update)
         self.timer.connect('mode-changed', self.mode_changed)
         self.evbox.connect('button-release-event', self.showMenu)
         # TODO: Make this work.
         #self.evbox.connect('popup-menu', self.showMenu)
 
-        self.update(self.timer, self.timer.mode)
+        self.update(self.timer)
         self.menu.show_all() #TODO: Is this line necessary?
         self.show_all()
 
@@ -785,15 +794,15 @@ class MainWin(RoundedWindow):
         btn = self.btns.get(mode.name)
         if btn and not btn.get_active():
             btn.set_active(True)
-        self.update(model, mode)
+        self.update(model)
 
-    def update(self, timer, mode, delta=None):
+    def update(self, model):
         """Common code used for initializing and updating the progress bars."""
-        if self.timer.mode:
+        if model.mode:
             #FIXME: Not helpful when overflow kicks in. Rethink.
             # (Maybe fixable with my "don't actually make overflow reset the
             # active timer" change for record-keeping.)
-            self.set_title(str(mode))
+            self.set_title(str(model.mode))
         else:
             self.set_title("Timeclock Paused")
 
@@ -824,8 +833,8 @@ class TimeClock(object):
         self.timer = timer
         self._init_widgets()
 
-        # 'tick' must be connected before the load.
-        self.timer.connect('tick', self.update_progressBars)
+        #FIXME: Update interaction on load is getting iffy.
+        self.timer.connect('updated', self.update_progressBars)
         self.timer.connect('mode-changed', self.mode_changed)
         self.saved_state = {}
 

@@ -215,6 +215,15 @@ class Mode(gobject.GObject):
         self.used = used
         self.overflow = overflow
 
+    def __str__(self):
+        remaining = round(self.remaining())
+        if remaining >= 0:
+            ptime = time.strftime('%H:%M:%S', time.gmtime(remaining))
+        else:
+            ptime = time.strftime('-%H:%M:%S', time.gmtime(abs(remaining)))
+
+        return '%s: %s' % (self.name, ptime)
+
     def remaining(self):
         """Return the remaining time in this mode as an integer"""
         return self.total - self.used
@@ -671,14 +680,8 @@ class ModeButton(gtk.RadioButton):
         return self.progress.get_text()
 
     def update_label(self, mode, delta=None):
-        remaining = round(mode.remaining())
-        if remaining >= 0:
-            ptime = time.strftime('%H:%M:%S', time.gmtime(remaining))
-        else:
-            ptime = time.strftime('-%H:%M:%S', time.gmtime(abs(remaining)))
-
-        self.progress.set_text('%s: %s' % (mode.name, ptime))
-        self.progress.set_fraction(max(float(remaining) / mode.total, 0))
+        self.progress.set_text(str(mode))
+        self.progress.set_fraction(max(float(mode.remaining()) / mode.total, 0))
 
 class MainWinContextMenu(gtk.Menu):
     def __init__(self, model, *args, **kwargs):
@@ -764,7 +767,7 @@ class MainWin(RoundedWindow):
         # TODO: Make this work.
         #self.evbox.connect('popup-menu', self.showMenu)
 
-        self.update(self.timer)
+        self.update(self.timer, self.timer.mode)
         self.menu.show_all() #TODO: Is this line necessary?
         self.show_all()
 
@@ -782,18 +785,15 @@ class MainWin(RoundedWindow):
         btn = self.btns.get(mode.name)
         if btn and not btn.get_active():
             btn.set_active(True)
-        self.update(model)
+        self.update(model, mode)
 
-    def update(self, timer, mode=None, delta=None):
-        """Common code used for initializing and updating the progress bars.
-
-        :todo: Actually use the mode and delta passed in.
-        """
+    def update(self, timer, mode, delta=None):
+        """Common code used for initializing and updating the progress bars."""
         if self.timer.mode:
             #FIXME: Not helpful when overflow kicks in. Rethink.
             # (Maybe fixable with my "don't actually make overflow reset the
             # active timer" change for record-keeping.)
-            self.set_title(self.btns[self.timer.mode.name].get_text())
+            self.set_title(str(mode))
         else:
             self.set_title("Timeclock Paused")
 
@@ -901,12 +901,7 @@ class TimeClock(object):
             pbar = self.timer_widgets[widget]
             remaining = round(timer.remaining())
             if pbar:
-                if remaining >= 0:
-                    pbar.set_text(time.strftime('%H:%M:%S',
-                        time.gmtime(remaining)))
-                else:
-                    pbar.set_text(time.strftime('-%H:%M:%S',
-                        time.gmtime(abs(remaining))))
+                pbar.set_text(str(timer))
                 pbar.set_fraction(max(float(remaining) / timer.total, 0))
 
     def btn_toggled(self, widget):

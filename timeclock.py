@@ -12,8 +12,6 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
  - Probably a good idea to write and share a wrapper
 
 @todo: Planned improvements:
- - Split "mode" into "selected" and "active" for a generalized version of the
-   (pressed button vs. title displayed in taskbar) distinction.
  - Decide how overflow should behave if the target timer is out too.
  - Double-check that it still works on Python 2.4.
  - Fixing setting up a decent MVC-ish archtecture using GObject signals.
@@ -290,24 +288,26 @@ class TimerModel(gobject.GObject):
         self.notify = True
         self.timer_order = [x['name'] for x in default_timers]
         self.timers = dict((x['name'], Mode(**x)) for x in default_timers)
-        self._mode = self.timers.get(start_mode, None)
+        self._selected = self.timers.get(start_mode, None)
+
+        self.active = self._selected
 
         for mode in self.timers.values():
+            #FIXME: For some reason, the following bindings aren't firing.
             mode.connect('updated', self.updated)
+            mode.connect('notify-tick', self.notify_tick)
 
     def updated(self, mode):
         self.emit('updated')
 
-    def notify_tick(self):
-        if self.mode:
-            self.mode.notify_tick()
-            self.emit('notify-tick', self.mode)
+    def notify_tick(self, mode):
+        self.emit('notify-tick', self.active)
 
     def reset(self):
         """Reset all timers to starting values"""
         for timer in self.timers.values():
             timer.reset()
-        self.mode = None
+        self.selected = None
 
     def load(self):
         """Load the save file if present. Log and start clean otherwise."""
@@ -385,14 +385,17 @@ class TimerModel(gobject.GObject):
             #TODO: I need some way to trigger a re-build of the view's signal bindings.
 
     #TODO: Reimplement using signalled_property and a signal connect.
-    def _get_mode(self):
-        return self._mode
-    def _set_mode(self, mode):
+    def _get_selected(self):
+        return self._selected
+    def _set_selected(self, mode):
         #XXX: Decide how to properly handle the Asleep case.
-        self._mode = mode
+        self._selected = mode
+        self.active = mode
+        #TODO: Figure out what class should bear responsibility for
+        # automatically changing self.active when self.mode is changed.
         self.save()
         self.emit('mode-changed', mode)
-    mode = property(_get_mode, _set_mode)
+    selected = property(_get_selected, _set_selected)
 
     def remaining(self, mode=None):
         mode = mode or self.mode
@@ -446,34 +449,38 @@ class TimerController(gobject.GObject):
 
     def tick(self):
         """Callback for updating progress bars."""
-        now, mode = time.time(), self.model.mode
-        if mode:
+        now = time.time()
+        selected = self.model.selected
+        active = self.model.active
+
+        if selected:
             delta = now - self.last_tick
             notify_delta = now - self.last_notify
-            mode.used += delta
 
-            if mode.remaining() < 0:
-                overtime = abs(mode.remaining())
-                overflow_to = self.model.timers.get(mode.overflow)
+            active.used += delta
+
+            #TODO: Decide how best to fire notifications immediately on expiry
+            #TODO: Decide what to do if both selected and active are expired.
+            if selected.remaining() <= 0 and notify_delta > 900:
+                selected.notify_tick()
+                self.last_notify = now
+
+            if active.remaining() < 0:
+                overtime = abs(active.remaining())
+                overflow_to = self.model.timers.get(active.overflow)
                 if overflow_to:
+                    active.used = active.total
+                    overflow_to.used += overtime
                     # TODO: Probably best to rethink to allow accurate
                     # record-keeping. (Maybe an additional field to track
                     # overflowed time so I can drain "total" rather than "used"
                     # without messing up stored settings)
-                    mode.used = mode.total
-                    overflow_to.used += overtime
-
-                #TODO: Decide how best to ensure notifications fire immediately
-                # on expiry.
-                if notify_delta > 900:
-                    self.model.notify_tick()
-                    self.last_notify = now
+                    self.model.active = overflow_to
 
             if now >= (self.model.last_save + SAVE_INTERVAL):
                 self.model.save()
 
         self.last_tick = now
-
         return True
 
 class IdleController(gobject.GObject):
@@ -617,7 +624,7 @@ class AudioNotifier(gobject.GObject):
         # - http://stackoverflow.com/questions/307305/play-a-sound-with-python
 
     def notify_exhaustion(self, model, mode=None):
-        #TODO: Did I really need to do this?
+        #TODO: Do I really need to set STATE_NULL first?
         self.bin.set_state(self.gst.STATE_NULL)
         self.bin.set_state(self.gst.STATE_PLAYING)
 
@@ -798,7 +805,7 @@ class MainWin(RoundedWindow):
     def btn_toggled(self, widget):
         """Callback for clicking the timer-selection radio buttons"""
         if widget.get_active():
-            self.timer.mode = widget.mode
+            self.timer.selected = widget.mode
 
     def mode_changed(self, model, mode):
         btn = self.btns.get(mode.name)
@@ -808,11 +815,11 @@ class MainWin(RoundedWindow):
 
     def update(self, model):
         """Common code used for initializing and updating the progress bars."""
-        if model.mode:
-            #FIXME: Not helpful when overflow kicks in. Rethink.
+        if model.selected:
+            #FIXME: Not ideal when overflow kicks in. Rethink.
             # (Maybe fixable with my "don't actually make overflow reset the
             # active timer" change for record-keeping.)
-            self.set_title(str(model.mode))
+            self.set_title(str(model.active))
         else:
             self.set_title("Timeclock Paused")
 
@@ -886,8 +893,8 @@ class TimeClock(object):
         sleepBtn = self.mTree.get_widget('btn_sleepMode')
         sleepBtn.mode = None
 
-        if self.timer.mode:
-            mode_name = self.timer.mode.name.lower()
+        if self.timer.selected:
+            mode_name = self.timer.selected.name.lower()
             self.selectedBtn = self.mTree.get_widget('btn_%sMode' % mode_name)
         else:
             self.selectedBtn = sleepBtn
@@ -927,7 +934,7 @@ class TimeClock(object):
         """Callback for clicking the timer-selection radio buttons"""
         if widget.get_active():
             self.selectedBtn = widget
-            self.timer.mode = widget.mode
+            self.timer.selected = widget.mode
 
     def mode_changed(self, model, mode):
         mode = mode.name or 'sleep'

@@ -1001,13 +1001,6 @@ def main():
                       "interfering with normal use")
 
     opts, args = parser.parse_args()
-    #FIXME: Restore this once the model is truly independent of the view.
-    #if opts.mode == 'help':
-    #    print "Valid mode names are: %s" % ', '.join(MODE_NAMES)
-    #    parser.exit(0)
-    #elif (opts.mode not in MODE_NAMES):
-    #    print "Mode '%s' not recognized, defaulting to sleep." % opts.mode
-    #    opts.mode = None
 
     if opts.develop:
         lockname = __file__ + '.dev'
@@ -1025,6 +1018,13 @@ def main():
     # Model
     model = TimerModel(opts.mode, save_file=savefile)
     model.load()
+
+    if opts.mode == 'help':
+        print "Valid mode names are: %s" % ', '.join(model.timers)
+        parser.exit(0)
+    elif (opts.mode not in model.timers):
+        print "Mode '%s' not recognized, defaulting to sleep." % opts.mode
+        opts.mode = None
 
     # Controllers
     TimerController(model)

@@ -725,7 +725,7 @@ class MainWinContextMenu(gtk.Menu):
         quit.connect('activate', gtk.main_quit)
 
     def cb_reset(self, widget):
-        #TODO: Look into how to get MainWin via parent-lookup calls so
+       #TODO: Look into how to get MainWinCompact via parent-lookup calls so
         # this can be destroyed with its parent.
         confirm = gtk.MessageDialog(type=gtk.MESSAGE_WARNING,
                 buttons=gtk.BUTTONS_OK_CANCEL,
@@ -735,10 +735,10 @@ class MainWinContextMenu(gtk.Menu):
             self.model.reset()
         confirm.destroy()
 
-class MainWin(RoundedWindow):
+class MainWinCompact(RoundedWindow):
     """Compact UI suitable for overlaying on titlebars"""
-    def __init__(self, timer):
-        super(MainWin, self).__init__()
+    def __init__(self, model):
+        super(MainWinCompact, self).__init__()
         self.set_icon_from_file(get_icon_path(64))
 
         self.model = model
@@ -973,7 +973,7 @@ class TimeClock(object):
         self.pTree.get_widget('prefsDlg').hide()
 
 KNOWN_UI_MAP = {
-        'compact': MainWin,
+        'compact': MainWinCompact,
         'legacy': TimeClock
 }
 

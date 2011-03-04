@@ -305,8 +305,8 @@ class TimerModel(gobject.GObject):
 
     def reset(self):
         """Reset all timers to starting values"""
-        for timer in self.timers.values():
-            timer.reset()
+        for mode in self.timers.values():
+            mode.reset()
         self.selected = None
 
     def load(self):
@@ -741,15 +741,15 @@ class MainWin(RoundedWindow):
         super(MainWin, self).__init__()
         self.set_icon_from_file(get_icon_path(64))
 
-        self.timer = timer
+        self.model = model
         self.evbox = gtk.EventBox()
         self.box = gtk.HBox()
         self.btnbox = gtk.HButtonBox()
-        self.menu = MainWinContextMenu(timer)
+        self.menu = MainWinContextMenu(model)
 
         self.btns = {}
-        for name in self.timer.timer_order:
-            btn = ModeButton(self.timer.timers[name])
+        for name in model.timer_order:
+            btn = ModeButton(model.timers[name])
             self.btns[name] = btn
 
             btn.connect('toggled', self.btn_toggled)
@@ -781,13 +781,13 @@ class MainWin(RoundedWindow):
         self.set_keep_above(True)
         self.stick()
 
-        self.timer.connect('updated', self.update)
-        self.timer.connect('mode-changed', self.mode_changed)
+        self.model.connect('updated', self.update)
+        self.model.connect('mode-changed', self.mode_changed)
         self.evbox.connect('button-release-event', self.showMenu)
         # TODO: Make this work.
         #self.evbox.connect('popup-menu', self.showMenu)
 
-        self.update(self.timer)
+        self.update(model)
         self.menu.show_all() #TODO: Is this line necessary?
         self.show_all()
 
@@ -799,7 +799,7 @@ class MainWin(RoundedWindow):
     def btn_toggled(self, widget):
         """Callback for clicking the timer-selection radio buttons"""
         if widget.get_active():
-            self.timer.selected = widget.mode
+            self.model.selected = widget.mode
 
     def mode_changed(self, model, mode):
         btn = self.btns.get(mode.name)
@@ -835,18 +835,18 @@ class MainWin(RoundedWindow):
 class TimeClock(object):
     selectedBtn = None
 
-    def __init__(self, timer):
+    def __init__(self, model):
 
         #Set the Glade file
         self.mTree = gtk.glade.XML(os.path.join(SELF_DIR, "main_large.glade"))
         self.pTree = gtk.glade.XML(os.path.join(SELF_DIR, "preferences.glade"))
 
-        self.timer = timer
+        self.model = model
         self._init_widgets()
 
         #FIXME: Update interaction on load is getting iffy.
-        self.timer.connect('updated', self.update_progressBars)
-        self.timer.connect('mode-changed', self.mode_changed)
+        self.model.connect('updated', self.update_progressBars)
+        self.model.connect('mode-changed', self.mode_changed)
         self.saved_state = {}
 
         # Connect signals
@@ -879,7 +879,7 @@ class TimeClock(object):
         """All non-signal, non-glade widget initialization."""
         # Set up the data structures
         self.timer_widgets = {}
-        for mode in self.timer.timers:
+        for mode in self.model.timers:
             widget = self.mTree.get_widget('btn_%sMode' % mode.lower())
             widget.mode = mode
             self.timer_widgets[widget] = \
@@ -887,8 +887,8 @@ class TimeClock(object):
         sleepBtn = self.mTree.get_widget('btn_sleepMode')
         sleepBtn.mode = None
 
-        if self.timer.selected:
-            mode_name = self.timer.selected.name.lower()
+        if self.model.selected:
+            mode_name = self.model.selected.name.lower()
             self.selectedBtn = self.mTree.get_widget('btn_%sMode' % mode_name)
         else:
             self.selectedBtn = sleepBtn
@@ -908,27 +908,27 @@ class TimeClock(object):
                 message_format="Reset all timers?\n"
                 "Warning: This operation cannot be undone.")
         if confirm.run() == gtk.RESPONSE_OK:
-            self.timer.reset()
+            self.model.reset()
         confirm.destroy()
 
-    def update_progressBars(self, timer=None, mode=None, delta=None):
+    def update_progressBars(self, model=None, mode=None, delta=None):
         """Common code used for initializing and updating the progress bars.
 
         :todo: Actually use the values passed in by the emit() call.
         """
         for widget in self.timer_widgets:
-            timer = self.timer.timers[widget.mode]
+            mode = self.model.timers[widget.mode]
             pbar = self.timer_widgets[widget]
-            remaining = round(timer.remaining())
+            remaining = round(mode.remaining())
             if pbar:
-                pbar.set_text(str(timer))
-                pbar.set_fraction(max(float(remaining) / timer.total, 0))
+                pbar.set_text(str(mode))
+                pbar.set_fraction(max(float(remaining) / mode.total, 0))
 
     def btn_toggled(self, widget):
         """Callback for clicking the timer-selection radio buttons"""
         if widget.get_active():
             self.selectedBtn = widget
-            self.timer.selected = widget.mode
+            self.model.selected = widget.mode
 
     def mode_changed(self, model, mode):
         mode = mode.name or 'sleep'
@@ -939,15 +939,15 @@ class TimeClock(object):
     def prefs_clicked(self, widget):
         """Callback for the preferences button"""
         # Set the spin widgets to the current settings.
-        for mode in self.timer.timers:
+        for mode in self.model.timers:
             widget_spin =  'spinBtn_%sMode' % mode.lower()
             widget = self.pTree.get_widget(widget_spin)
-            widget.set_value(self.timer.timers[mode].total / 3600.0)
+            widget.set_value(self.model.timers[mode].total / 3600.0)
 
         # Set the notify option to the current value, disable and explain if
         # pynotify is not installed.
         notify_box = self.pTree.get_widget('checkbutton_notify')
-        notify_box.set_active(self.timer.notify)
+        notify_box.set_active(self.model.notify)
         notify_box.set_sensitive(True)
         notify_box.set_label("display notifications")
 
@@ -960,13 +960,13 @@ class TimeClock(object):
     def prefs_commit(self, widget):
         """Callback for OKing changes to the preferences"""
         # Update the time settings for each mode.
-        for mode in self.timer.timers:
+        for mode in self.model.timers:
             widget_spin =  'spinBtn_%sMode' % mode.lower()
             widget = self.pTree.get_widget(widget_spin)
-            self.timer.timers[mode].total = (widget.get_value() * 3600)
+            self.model.timers[mode].total = (widget.get_value() * 3600)
 
         notify_box = self.pTree.get_widget('checkbutton_notify')
-        self.timer.notify = notify_box.get_active()
+        self.model.notify = notify_box.get_active()
 
         # Remaining cleanup.
         self.update_progressBars()
@@ -1023,19 +1023,19 @@ def main():
     gtkexcepthook.enable()
 
     # Model
-    timer = TimerModel(opts.mode, save_file=savefile)
-    timer.load()
+    model = TimerModel(opts.mode, save_file=savefile)
+    model.load()
 
     # Controllers
-    TimerController(timer)
-    IdleController(timer)
+    TimerController(model)
+    IdleController(model)
 
     # Notification Views
     if not opts.notifiers:
         opts.notifiers = DEFAULT_NOTIFY_LIST
     for name in opts.notifiers:
         try:
-            KNOWN_NOTIFY_MAP[name](timer)
+            KNOWN_NOTIFY_MAP[name](model)
         except ImportError:
             logging.warn("Could not initialize notifier %s due to unsatisfied "
                          "dependencies.", name)
@@ -1047,7 +1047,7 @@ def main():
         opts.interfaces = DEFAULT_UI_LIST
     for name in opts.interfaces:
         try:
-            KNOWN_UI_MAP[name](timer)
+            KNOWN_UI_MAP[name](model)
         except ImportError:
             logging.warn("Could not initialize UI %s due to unsatisfied "
                          "dependencies.", name)
@@ -1059,7 +1059,7 @@ def main():
     #TODO: Try adding a "set urgent hint" call on the same interval as these.
 
     # Save state on exit
-    sys.exitfunc = timer.save
+    sys.exitfunc = model.save
 
     # Make sure signals call sys.exitfunc.
     for signame in ("SIGTERM", "SIGINT", "SIGHUP", "SIGQUIT"):

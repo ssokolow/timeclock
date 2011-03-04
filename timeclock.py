@@ -397,12 +397,6 @@ class TimerModel(gobject.GObject):
         self.emit('mode-changed', mode)
     selected = property(_get_selected, _set_selected)
 
-    def remaining(self, mode=None):
-        mode = mode or self.mode
-        if not mode: #TODO: Make asleep an object so I don't need this.
-            return 0
-        return mode.remaining()
-
     def save(self):
         """Exit/Timeout handler for the app. Gets called every five minutes and
         on every type of clean exit except xkill. (PyGTK doesn't let you)

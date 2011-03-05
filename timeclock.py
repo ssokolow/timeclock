@@ -12,6 +12,9 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
  - Probably a good idea to write and share a wrapper
 
 @todo: Planned improvements:
+ - Switch to a JSON-based save format for easier reading/editing/debugging.
+   (Given my heavy use of GObject signals, it's not as if I can take proper
+   advantage of pickle anyway)
  - Decide how overflow should behave if the target timer is out too.
  - Double-check that it still works on Python 2.4.
  - Fixing setting up a decent MVC-ish archtecture using GObject signals.
@@ -26,8 +29,6 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
    like "always on top" and "on all desktops"?
  - Have the system complain if overhead + work + leisure + sleep (8 hours) > 24
    and enforce minimums of 1 hour for leisure and overhead.
- - Rework the design to minimize dependence on GTK+ (in case I switch to Qt for
-   Phonon)
  - Report PyGTK's uncatchable xkill response on the bug tracker.
  - Explore how progress bars behave when their base colors are changed:
    (http://hg.atheme.org/audacious/audacious-plugins/diff/a25b618e8f4a/src/gtkui/ui_playlist_widget.c)
@@ -45,8 +46,6 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
    to one)
 
 @todo: Consider:
- - Changing this into a Plasma widget (Without dropping PyGTK support)
- - Using PyKDE bindings to the KDE Notification system (for the Plasma widget)
  - Look into integrating with http://projecthamster.wordpress.com/
 
 @todo: Publish this on listing sites:
@@ -64,6 +63,12 @@ __authors__  = [
     "Charlie Nolan (FunnyMan3595)"]
 
 default_timers = [
+    {
+        'class': 'UnlimitedMode',
+        'name' : 'Asleep',
+        'total': int(3600 * 8),
+        'used' : 0,
+    },
     {
         'name' : 'Overhead',
         'total': int(3600 * 3.5),
@@ -232,6 +237,7 @@ class Mode(gobject.GObject):
     total = signalled_property('_total', 'updated')
     used = signalled_property('_used', 'updated')
     overflow = signalled_property('_overflow', 'updated')
+    show = True
 
     def __init__(self, name, total, used=0, overflow=None):
         self.__gobject_init__()
@@ -261,6 +267,7 @@ class Mode(gobject.GObject):
     def save(self):
         """Serialize into a dict that can be used with __init__."""
         return {
+                'class': self.__class__.__name__,
                 'name': self.name,
                 'total': self.total,
                 'used': self.used,
@@ -270,6 +277,15 @@ class Mode(gobject.GObject):
     def notify_tick(self):
         self.emit('notify-tick')
 
+class UnlimitedMode(Mode):
+    """Data and operations for modes like Asleep"""
+    show = False
+    def __str__(self):
+        return self.name
+    def remaining(self):
+        return 1 #TODO: Decide on a better way to do this.
+
+SAFE_MODE_CLASSES = [Mode, UnlimitedMode]
 CURRENT_SAVE_VERSION = 6 #: Used for save file versioning
 class TimerModel(gobject.GObject):
     """Model class which still needs more refactoring."""
@@ -284,16 +300,18 @@ class TimerModel(gobject.GObject):
 
         self.last_save = 0
         self.save_file = save_file
+        self.start_mode = start_mode
 
         self.notify = True
-        self.timer_order = [x['name'] for x in default_timers]
-        self.timers = dict((x['name'], Mode(**x)) for x in default_timers)
-        self._selected = self.timers.get(start_mode, None)
+        self._load()
+        # IMPORTANT: _load() MUST be called before signals are bound.
 
-        self.active = self._selected
+        #TODO: Still need to add Asleep as an explicit mode under the new model.
+        self.start_mode = ([x for x in self.timers if x.name == start_mode] or [self.timers[0]])[0]
+        self._selected = self.start_mode
+        self.active = self.start_mode
 
-        for mode in self.timers.values():
-            #FIXME: For some reason, the following bindings aren't firing.
+        for mode in self.timers:
             mode.connect('updated', self.updated)
             mode.connect('notify-tick', self.notify_tick)
 
@@ -305,11 +323,11 @@ class TimerModel(gobject.GObject):
 
     def reset(self):
         """Reset all timers to starting values"""
-        for mode in self.timers.values():
+        for mode in self.timers:
             mode.reset()
-        self.selected = None
+        self.selected = self.start_mode
 
-    def load(self):
+    def _load(self):
         """Load the save file if present. Log and start clean otherwise."""
         if file_exists(self.save_file):
             try:
@@ -320,6 +338,9 @@ class TimerModel(gobject.GObject):
                 fh = open(self.save_file, 'rb')
                 loaded = pickle.load(fh)
                 fh.close()
+
+                #TODO: Move all the migration code to a different module.
+                #TODO: Pull out old versions of Timeclock and generate unit test data.
 
                 version = loaded[0]
                 if version == CURRENT_SAVE_VERSION:
@@ -358,7 +379,7 @@ class TimerModel(gobject.GObject):
                             % (CURRENT_SAVE_VERSION, version))
 
                 if version <= 4:
-                    MODE_NAMES = (None, 'Overhead', 'Work', 'Leisure')
+                    MODE_NAMES = ('Asleep', 'Overhead', 'Work', 'Leisure')
 
                     timers = []
                     for pos, row in enumerate(zip(total, used)):
@@ -380,15 +401,27 @@ class TimerModel(gobject.GObject):
                 #self.app.saved_state = win_state
                 #FIXME: Replace this with some kind of 'loaded' signal.
 
-            self.timer_order = [x['name'] for x in timers]
-            self.timers = dict((x['name'], Mode(**x)) for x in timers)
-            #TODO: I need some way to trigger a re-build of the view's signal bindings.
+        else:
+            timers = copy.deepcopy(default_timers)
+
+        self.timers = []
+        for data in timers:
+            if 'class' in data:
+                classname = data['class']
+                del data['class']
+            else:
+                classname = 'Mode'
+
+            cls = globals()[classname]
+            print cls
+            if cls in SAFE_MODE_CLASSES:
+                self.timers.append(cls(**data))
+        #TODO: I need some way to trigger a re-build of the view's signal bindings.
 
     #TODO: Reimplement using signalled_property and a signal connect.
     def _get_selected(self):
         return self._selected
     def _set_selected(self, mode):
-        #XXX: Decide how to properly handle the Asleep case.
         self._selected = mode
         self.active = mode
         #TODO: Figure out what class should bear responsibility for
@@ -408,10 +441,7 @@ class TimerModel(gobject.GObject):
         #        'decorated': self.app.win.get_decorated()
         #}
         window_state = {}
-
-        timers = []
-        for name in self.timer_order:
-            timers.append(self.timers[name].save())
+        timers = [mode.save() for mode in self.timers]
 
         data = {
             'timers': timers,
@@ -447,32 +477,31 @@ class TimerController(gobject.GObject):
         selected = self.model.selected
         active = self.model.active
 
-        if selected:
-            delta = now - self.last_tick
-            notify_delta = now - self.last_notify
+        delta = now - self.last_tick
+        notify_delta = now - self.last_notify
 
-            active.used += delta
+        active.used += delta
 
-            #TODO: Decide how best to fire notifications immediately on expiry
-            #TODO: Decide what to do if both selected and active are expired.
-            if selected.remaining() <= 0 and notify_delta > 900:
-                selected.notify_tick()
-                self.last_notify = now
+        #TODO: Decide how best to fire notifications immediately on expiry or mode switch
+        #TODO: Decide what to do if both selected and active are expired.
+        if selected.remaining() <= 0 and notify_delta > 900:
+            selected.notify_tick()
+            self.last_notify = now
 
-            if active.remaining() < 0:
-                overtime = abs(active.remaining())
-                overflow_to = self.model.timers.get(active.overflow)
-                if overflow_to:
-                    active.used = active.total
-                    overflow_to.used += overtime
-                    # TODO: Probably best to rethink to allow accurate
-                    # record-keeping. (Maybe an additional field to track
-                    # overflowed time so I can drain "total" rather than "used"
-                    # without messing up stored settings)
-                    self.model.active = overflow_to
+        if active.remaining() < 0:
+            overtime = abs(active.remaining())
+            overflow_to = ([x for x in self.model.timers if x.name == active.overflow] or [None])[0]
+            if overflow_to:
+                active.used = active.total
+                overflow_to.used += overtime
+                # TODO: Probably best to rethink to allow accurate
+                # record-keeping. (Maybe an additional field to track
+                # overflowed time so I can drain "total" rather than "used"
+                # without messing up stored settings)
+                self.model.active = overflow_to
 
-            if now >= (self.model.last_save + SAVE_INTERVAL):
-                self.model.save()
+        if now >= (self.model.last_save + SAVE_INTERVAL):
+            self.model.save()
 
         self.last_tick = now
         return True
@@ -518,10 +547,8 @@ class IdleController(gobject.GObject):
             idle_query = self.ss_conn.QueryInfo(self.setup.roots[0].root)
             idle_secs = idle_query.reply().ms_since_user_input / 1000.0
 
-            # We don't need to check self.model.mode because asleep stops
-            # the timer from ticking, but let's be safe and give find
-            # the opportunity to pick this up if I rework it.
-            if idle_secs >= SLEEP_RESET_INTERVAL and model:
+            #FIXME: This will fire once a second once the limit is passed
+            if idle_secs >= SLEEP_RESET_INTERVAL:
                 model.reset()
 
     def cb_xcb_response(self, source, condition):
@@ -569,16 +596,16 @@ class LibNotifyNotifier(gobject.GObject):
         self.notifications = {}
         for mode in model.timers:
             notification = pynotify.Notification(
-                "%s Time Exhausted" % mode,
+                "%s Time Exhausted" % mode.name,
                 "You have used all allotted time for %s" %
-                    xmlescape(mode.lower()),
+                    xmlescape(mode.name.lower()),
                 get_icon_path(48))
             notification.set_urgency(pynotify.URGENCY_NORMAL)
             notification.set_timeout(pynotify.EXPIRES_NEVER)
             notification.last_shown = 0
-            self.notifications[mode] = notification
+            self.notifications[mode.name] = notification
 
-            model.timers[mode].connect('notify-tick', self.notify_exhaustion)
+            mode.connect('notify-tick', self.notify_exhaustion)
 
     def notify_exhaustion(self, mode):
         """Display a libnotify notification that the given timer has expired"""
@@ -595,7 +622,6 @@ class AudioNotifier(gobject.GObject):
             import urllib
         finally:
             # Restore sys.argv so I can parse it cleanly.
-            # XXX: Use a context manager once I drop Python 2.4 support.
             sys.argv = _argv
 
         self.gst = gst
@@ -617,7 +643,7 @@ class AudioNotifier(gobject.GObject):
         # - http://stackoverflow.com/questions/276266/whats-a-cross-platform-way-to-play-a-sound-file-in-python
         # - http://stackoverflow.com/questions/307305/play-a-sound-with-python
 
-    def notify_exhaustion(self, model, mode=None):
+    def notify_exhaustion(self, model, mode):
         #TODO: Do I really need to set STATE_NULL first?
         self.bin.set_state(self.gst.STATE_NULL)
         self.bin.set_state(self.gst.STATE_PLAYING)
@@ -694,8 +720,13 @@ class ModeButton(gtk.RadioButton):
 
         mode.connect('updated', self.update_label)
 
-    def get_text(self):
-        return self.progress.get_text()
+    def mode_changed(self, model, mode):
+        """Bind this to the 'mode-changed' signal on the top-level model.
+
+        (Must be bound by MainWin if things are to remain modular)
+        """
+        if mode == self.mode and not self.get_active():
+            self.set_active(True)
 
     def update_label(self, mode):
         self.progress.set_text(str(mode))
@@ -747,24 +778,24 @@ class MainWinCompact(RoundedWindow):
         self.btnbox = gtk.HButtonBox()
         self.menu = MainWinContextMenu(model)
 
-        self.btns = {}
-        for name in model.timer_order:
-            btn = ModeButton(model.timers[name])
-            self.btns[name] = btn
-
+        first_btn = None
+        for mode in model.timers:
+            btn = ModeButton(mode)
             btn.connect('toggled', self.btn_toggled)
             btn.connect('button-press-event', self.showMenu)
-            self.btnbox.add(btn)
+            if mode.show:
+                self.btnbox.add(btn)
+            else:
+                pass #TODO: Hook up signals to share state with RadioMenuItem
+                # RadioMenuItem can't share a group with RadioButton
+                # ...so we fake it using hidden group members and signals.
 
-        # RadioMenuItem can't share a group with RadioButton
-        # ...so we fake it using hidden group members and signals.
-        sleep_btn = gtk.RadioButton()
-        sleep_btn.set_label('Asleep')
-        #TODO: Hook up signals to share state with RadioMenuItem
+            if first_btn:
+                btn.set_group(first_btn)
+            else:
+                first_btn = btn
 
-        for name in self.btns:
-            self.btns[name].set_group(sleep_btn)
-        self.btns[None] = sleep_btn
+            model.connect('mode-changed', btn.mode_changed)
 
         drag_handle = gtk.Image()
 
@@ -798,24 +829,18 @@ class MainWinCompact(RoundedWindow):
     #TODO: Normalize callback naming
     def btn_toggled(self, widget):
         """Callback for clicking the timer-selection radio buttons"""
-        if widget.get_active():
+        if widget.get_active() and not self.model.selected == widget.mode:
             self.model.selected = widget.mode
 
     def mode_changed(self, model, mode):
-        btn = self.btns.get(mode.name)
-        if btn and not btn.get_active():
-            btn.set_active(True)
         self.update(model)
 
     def update(self, model):
         """Common code used for initializing and updating the progress bars."""
-        if model.selected:
-            #FIXME: Not ideal when overflow kicks in. Rethink.
-            # (Maybe fixable with my "don't actually make overflow reset the
-            # active timer" change for record-keeping.)
-            self.set_title(str(model.active))
-        else:
-            self.set_title("Timeclock Paused")
+        #FIXME: Not ideal when overflow kicks in. Rethink.
+        # (Maybe fixable with my "don't actually make overflow reset the
+        # active timer" change for record-keeping.)
+        self.set_title(str(model.active))
 
     def showMenu(self, widget, event=None, data=None):
         if event:
@@ -880,18 +905,17 @@ class TimeClock(object):
         # Set up the data structures
         self.timer_widgets = {}
         for mode in self.model.timers:
-            widget = self.mTree.get_widget('btn_%sMode' % mode.lower())
-            widget.mode = mode
+            widget = self.mTree.get_widget('btn_%sMode' % mode.name.lower())
+            widget.mode = mode.name
             self.timer_widgets[widget] = \
-                self.mTree.get_widget('progress_%sMode' % mode.lower())
+                self.mTree.get_widget('progress_%sMode' % mode.name.lower())
         sleepBtn = self.mTree.get_widget('btn_sleepMode')
         sleepBtn.mode = None
 
-        if self.model.selected:
-            mode_name = self.model.selected.name.lower()
-            self.selectedBtn = self.mTree.get_widget('btn_%sMode' % mode_name)
-        else:
-            self.selectedBtn = sleepBtn
+        mode_name = self.model.selected.name.lower()
+        if mode_name.lower() == 'asleep':
+            mode_name == 'sleep'
+        self.selectedBtn = self.mTree.get_widget('btn_%sMode' % mode_name)
         self.selectedBtn.set_active(True)
 
         # Because PyGTK isn't reliably obeying Glade
@@ -917,7 +941,7 @@ class TimeClock(object):
         :todo: Actually use the values passed in by the emit() call.
         """
         for widget in self.timer_widgets:
-            mode = self.model.timers[widget.mode]
+            mode = [x for x in self.model.timers if x.name == widget.mode][0]
             pbar = self.timer_widgets[widget]
             remaining = round(mode.remaining())
             if pbar:
@@ -931,7 +955,7 @@ class TimeClock(object):
             self.model.selected = widget.mode
 
     def mode_changed(self, model, mode):
-        mode = mode.name or 'sleep'
+        mode = mode.name
         btn = self.mTree.get_widget('btn_%sMode' % mode.lower())
         if btn and not btn.get_active():
             btn.set_active(True)
@@ -940,9 +964,9 @@ class TimeClock(object):
         """Callback for the preferences button"""
         # Set the spin widgets to the current settings.
         for mode in self.model.timers:
-            widget_spin =  'spinBtn_%sMode' % mode.lower()
+            widget_spin =  'spinBtn_%sMode' % mode.name.lower()
             widget = self.pTree.get_widget(widget_spin)
-            widget.set_value(self.model.timers[mode].total / 3600.0)
+            widget.set_value(mode.total / 3600.0)
 
         # Set the notify option to the current value, disable and explain if
         # pynotify is not installed.
@@ -961,9 +985,9 @@ class TimeClock(object):
         """Callback for OKing changes to the preferences"""
         # Update the time settings for each mode.
         for mode in self.model.timers:
-            widget_spin =  'spinBtn_%sMode' % mode.lower()
+            widget_spin =  'spinBtn_%sMode' % mode.name.lower()
             widget = self.pTree.get_widget(widget_spin)
-            self.model.timers[mode].total = (widget.get_value() * 3600)
+            mode.total = (widget.get_value() * 3600)
 
         notify_box = self.pTree.get_widget('checkbutton_notify')
         self.model.notify = notify_box.get_active()
@@ -981,7 +1005,7 @@ def main():
     from optparse import OptionParser
     parser = OptionParser(version="%%prog v%s" % __version__)
     parser.add_option('-m', '--initial-mode',
-                      action="store", dest="mode", default="sleep",
+                      action="store", dest="mode", default="Asleep",
                       metavar="MODE", help="start in MODE. (Use 'help' for a list)")
     parser.add_option('--ui',
                       action="append", dest="interfaces", default=[],
@@ -1017,14 +1041,15 @@ def main():
 
     # Model
     model = TimerModel(opts.mode, save_file=savefile)
-    model.load()
 
     if opts.mode == 'help':
         print "Valid mode names are: %s" % ', '.join(model.timers)
         parser.exit(0)
-    elif (opts.mode not in model.timers):
-        print "Mode '%s' not recognized, defaulting to sleep." % opts.mode
-        opts.mode = None
+    elif (opts.mode not in [x.name for x in model.timers]):
+        default = model.timers[0]
+        print ("Mode '%s' not recognized, defaulting to %s." %
+            (opts.mode, default.name))
+        opts.mode = default
 
     # Controllers
     TimerController(model)

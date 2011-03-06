@@ -15,6 +15,8 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
  - Switch to a JSON-based save format for easier reading/editing/debugging.
    (Given my heavy use of GObject signals, it's not as if I can take proper
    advantage of pickle anyway)
+ - Strip out all these super() calls since it's still easy to introduce subtle
+   bugs by forgetting to super() to the top of every branch of the hierarchy.
  - Decide how overflow should behave if the target timer is out too.
  - Double-check that it still works on Python 2.4.
  - Fixing setting up a decent MVC-ish archtecture using GObject signals.
@@ -110,7 +112,7 @@ NOTIFY_SOUND = os.path.join(
         '49213__tombola__Fisher_Price29.wav')
 
 DEFAULT_UI_LIST = ['compact', 'legacy']
-DEFAULT_NOTIFY_LIST = ['audio', 'libnotify']
+DEFAULT_NOTIFY_LIST = ['audio', 'libnotify', 'osd']
 file_exists = os.path.isfile
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
@@ -121,7 +123,7 @@ try:
 except ImportError:
     pass
 
-import cairo, gtk, gobject
+import cairo, gtk, gobject, pango
 import gtk.glade
 
 import gtkexcepthook
@@ -648,17 +650,70 @@ class AudioNotifier(gobject.GObject):
         self.bin.set_state(self.gst.STATE_NULL)
         self.bin.set_state(self.gst.STATE_PLAYING)
 
+class OSDNaggerNotifier(gobject.GObject):
+    """A timer expiry notification view based on an unmanaged window."""
+    def __init__(self, model):
+        self.__gobject_init__()
+
+        self.windows = {}
+
+        display_manager = gtk.gdk.display_manager_get()
+        for display in display_manager.list_displays():
+            self.cb_display_opened(display_manager, display)
+
+        model.connect('notify-tick', self.notify_exhaustion)
+        display_manager.connect("display-opened", self.cb_display_opened)
+
+    def cb_display_closed(self, display, is_error):
+        pass #TODO: Dereference and destroy the corresponding OSDWindows.
+
+    def cb_display_opened(self, manager, display):
+        for screen_num in range(0,display.get_n_screens()):
+            screen = display.get_screen(screen_num)
+
+            self.cb_monitors_changed(screen)
+            screen.connect("monitors-changed", self.cb_monitors_changed)
+
+        display.connect('closed', self.cb_display_closed)
+
+    def cb_monitors_changed(self, screen):
+        #FIXME: This must handle changes and deletes in addition to adds.
+        for monitor_num in range(0,screen.get_n_monitors()):
+            display_name = screen.get_display().get_name()
+            screen_num = screen.get_number()
+            geom = screen.get_monitor_geometry(monitor_num)
+
+            key = (display_name, screen_num, tuple(geom))
+            if key not in self.windows:
+                window = OSDWindow()
+                window.set_screen(screen)
+                window.set_gravity(gtk.gdk.GRAVITY_CENTER)
+                window.move(geom.x + geom.width/2, geom.y + geom.height/2)
+                self.windows[key] = window
+
+    def notify_exhaustion(self, model, mode):
+        """Display an OSD on each monitor"""
+        for win in self.windows.values():
+            #TODO: The message template should be separated.
+            #TODO: I need to also display some kind of message expiry countdown
+            #FIXME: This doesn't yet get along with overtime.
+            win.message("Timer Expired: %s" % mode.name,
+                    max(1, abs(mode.remaining()) / 180))
+
 KNOWN_NOTIFY_MAP = {
         'audio': AudioNotifier,
-        'libnotify': LibNotifyNotifier
+        'libnotify': LibNotifyNotifier,
+        'osd': OSDNaggerNotifier
 }
 
 #{ UI Components
 
 class RoundedWindow(gtk.Window):
     """Undecorated gtk.Window with rounded corners."""
-    def __init__(self):
-        gtk.Window.__init__(self)
+    def __init__(self, corner_radius=10, *args, **kwargs):
+        gtk.Window.__init__(self, *args, **kwargs)
+
+        self.corner_radius = corner_radius
         self.connect('size-allocate', self._on_size_allocate)
         self.set_decorated(False)
 
@@ -698,11 +753,39 @@ class RoundedWindow(gtk.Window):
         # Draw our shape into the bitmap using cairo
         cr.set_source_rgb(1.0, 1.0, 1.0)
         cr.set_operator(cairo.OPERATOR_SOURCE)
-        self.rounded_rectangle(cr, 0, 0, w, h, 10)
+        self.rounded_rectangle(cr, 0, 0, w, h, self.corner_radius)
         cr.fill()
 
         # Set the window shape
         win.shape_combine_mask(bitmap, 0, 0)
+
+class OSDWindow(RoundedWindow):
+    """Simple OSD overlay for notifications"""
+
+    font = pango.FontDescription("Sans Serif 22")
+
+    def __init__(self, corner_radius=25, *args, **kwargs):
+        super(OSDWindow, self).__init__(type=gtk.WINDOW_POPUP,
+                corner_radius=corner_radius, *args, **kwargs)
+
+        self.timeout_id = None
+
+        self.set_border_width(10)
+        self.label = gtk.Label()
+        self.label.modify_font(self.font)
+        self.add(self.label)
+
+    def message(self, text, timeout):
+        self.label.set_text(text)
+        self.show_all()
+
+        if self.timeout_id:
+            gobject.source_remove(self.timeout_id)
+        self.timeout_id = gobject.timeout_add_seconds(timeout, self.cb_timeout)
+
+    def cb_timeout(self):
+        self.hide()
+        return False
 
 class ModeButton(gtk.RadioButton):
     """Compact progress-button representing a timer mode."""

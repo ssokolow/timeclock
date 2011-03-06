@@ -470,6 +470,8 @@ class TimerController(gobject.GObject):
         self.model = model
         self.last_tick = time.time()
         self.last_notify = 0
+
+        model.connect('mode-changed', self.cb_mode_changed)
         gobject.timeout_add(1000, self.tick)
 
     def tick(self):
@@ -483,7 +485,6 @@ class TimerController(gobject.GObject):
 
         active.used += delta
 
-        #TODO: Decide how best to fire notifications immediately on expiry or mode switch
         #TODO: Decide what to do if both selected and active are expired.
         if selected.remaining() <= 0 and notify_delta > 900:
             selected.notify_tick()
@@ -506,6 +507,9 @@ class TimerController(gobject.GObject):
 
         self.last_tick = now
         return True
+
+    def cb_mode_changed(self, model, mode):
+        self.last_notify = 0
 
 class IdleController(gobject.GObject):
     """A controller to automatically reset the timer if you fall asleep."""

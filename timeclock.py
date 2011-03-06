@@ -17,10 +17,10 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
    advantage of pickle anyway)
  - Strip out all these super() calls since it's still easy to introduce subtle
    bugs by forgetting to super() to the top of every branch of the hierarchy.
- - Decide how overflow should behave if the target timer is out too.
+ - Decide whether overflow_to should cascade.
  - Double-check that it still works on Python 2.4.
- - Fixing setting up a decent MVC-ish archtecture using GObject signals.
-   http://stackoverflow.com/questions/2057921/python-gtk-create-custom-signals
+ - Have the system complain if overhead + work + leisure + sleep (8 hours) > 24
+   and enforce minimums of 1 hour for leisure and overhead.
  - Clicking the preferences button while the dialog is shown shouldn't reset
    the unsaved preference changes.
  - Extend the single-instance system to use D-Bus if available to raise/focus
@@ -29,8 +29,6 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
    corrections. (eg. you forgot to set the timer to leisure before going AFK)
  - Should I offer preferences options for remembering window position and such
    like "always on top" and "on all desktops"?
- - Have the system complain if overhead + work + leisure + sleep (8 hours) > 24
-   and enforce minimums of 1 hour for leisure and overhead.
  - Report PyGTK's uncatchable xkill response on the bug tracker.
  - Explore how progress bars behave when their base colors are changed:
    (http://hg.atheme.org/audacious/audacious-plugins/diff/a25b618e8f4a/src/gtkui/ui_playlist_widget.c)
@@ -58,11 +56,12 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
 """
 
 __appname__ = "The Procrastinator's Timeclock"
-__version__ = "0.2.99.0"
-__license__ = "GNU GPL 2.0 or later"
 __authors__  = [
     "Stephan Sokolow (deitarion/SSokolow)",
     "Charlie Nolan (FunnyMan3595)"]
+__author__ = ', '.join(__authors__)
+__version__ = "0.2.99.0"
+__license__ = "GNU GPL 2.0 or later"
 
 default_timers = [
     {
@@ -308,7 +307,7 @@ class TimerModel(gobject.GObject):
         self._load()
         # IMPORTANT: _load() MUST be called before signals are bound.
 
-        #TODO: Still need to add Asleep as an explicit mode under the new model.
+        #TODO: Still need to add "Asleep as an explicit mode" migration.
         self.start_mode = ([x for x in self.timers if x.name == start_mode] or [self.timers[0]])[0]
         self._selected = self.start_mode
         self.active = self.start_mode
@@ -342,7 +341,7 @@ class TimerModel(gobject.GObject):
                 fh.close()
 
                 #TODO: Move all the migration code to a different module.
-                #TODO: Pull out old versions of Timeclock and generate unit test data.
+                #TODO: Use old versions of Timeclock to generate unit test data
 
                 version = loaded[0]
                 if version == CURRENT_SAVE_VERSION:
@@ -417,7 +416,7 @@ class TimerModel(gobject.GObject):
             cls = globals()[classname]
             if cls in SAFE_MODE_CLASSES:
                 self.timers.append(cls(**data))
-        #TODO: I need some way to trigger a re-build of the view's signal bindings.
+        #TODO: I need a way to trigger a rebuild of the view's signal bindings.
 
     #TODO: Reimplement using signalled_property and a signal connect.
     def _get_selected(self):
@@ -669,7 +668,7 @@ class OSDNaggerNotifier(gobject.GObject):
         pass #TODO: Dereference and destroy the corresponding OSDWindows.
 
     def cb_display_opened(self, manager, display):
-        for screen_num in range(0,display.get_n_screens()):
+        for screen_num in range(0, display.get_n_screens()):
             screen = display.get_screen(screen_num)
 
             self.cb_monitors_changed(screen)
@@ -683,7 +682,7 @@ class OSDNaggerNotifier(gobject.GObject):
 
     def cb_monitors_changed(self, screen):
         #FIXME: This must handle changes and deletes in addition to adds.
-        for monitor_num in range(0,screen.get_n_monitors()):
+        for monitor_num in range(0, screen.get_n_monitors()):
             display_name = screen.get_display().get_name()
             screen_num = screen.get_number()
             geom = screen.get_monitor_geometry(monitor_num)
@@ -740,7 +739,7 @@ class RoundedWindow(gtk.Window):
 
         cr.move_to(x+r, y)                          # Move to A
         cr.line_to(x+w-r, y)                        # Straight line to B
-        cr.curve_to(x+w, y, x+w,y, x+w, y+r)        # Curve to C, Ctrl pts at Q
+        cr.curve_to(x+w, y, x+w, y, x+w, y+r)       # Curve to C, Ctrl pts at Q
         cr.line_to(x+w, y+h-r)                      # Move to D
         cr.curve_to(x+w, y+h, x+w, y+h, x+w-r, y+h) # Curve to E
         cr.line_to(x+r, y+h)                        # Line to F
@@ -827,7 +826,8 @@ class ModeButton(gtk.RadioButton):
 
     def update_label(self, mode):
         self.progress.set_text(str(mode))
-        self.progress.set_fraction(max(float(mode.remaining()) / mode.total, 0))
+        self.progress.set_fraction(
+                max(float(mode.remaining()) / mode.total, 0))
 
 class MainWinContextMenu(gtk.Menu):
     """Context menu for `MainWinCompact`"""
@@ -1097,9 +1097,9 @@ KNOWN_UI_MAP = {
 def main():
     from optparse import OptionParser
     parser = OptionParser(version="%%prog v%s" % __version__)
-    parser.add_option('-m', '--initial-mode',
-                      action="store", dest="mode", default="Asleep",
-                      metavar="MODE", help="start in MODE. (Use 'help' for a list)")
+    parser.add_option('-m', '--initial-mode', action="store", dest="mode",
+                      default="Asleep", metavar="MODE",
+                      help="start in MODE. (Use 'help' for a list)")
     parser.add_option('--ui',
                       action="append", dest="interfaces", default=[],
                       type='choice', choices=KNOWN_UI_MAP.keys(),
@@ -1108,7 +1108,8 @@ def main():
                       "May be specified multiple times for multiple UIs.")
     parser.add_option('--notifier',
                       action="append", dest="notifiers", default=[],
-                      type='choice', choices=KNOWN_NOTIFY_MAP.keys(), metavar="NAME",
+                      type='choice', choices=KNOWN_NOTIFY_MAP.keys(),
+                      metavar="NAME",
                       help="Activate the specified notification method. "
                       "May be specified several times for multiple notifiers.")
     parser.add_option('--develop',

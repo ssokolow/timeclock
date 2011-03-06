@@ -662,6 +662,7 @@ class OSDNaggerNotifier(gobject.GObject):
             self.cb_display_opened(display_manager, display)
 
         model.connect('notify-tick', self.notify_exhaustion)
+        model.connect('mode-changed', self.cb_mode_changed)
         display_manager.connect("display-opened", self.cb_display_opened)
 
     def cb_display_closed(self, display, is_error):
@@ -675,6 +676,10 @@ class OSDNaggerNotifier(gobject.GObject):
             screen.connect("monitors-changed", self.cb_monitors_changed)
 
         display.connect('closed', self.cb_display_closed)
+
+    def cb_mode_changed(self, model, mode):
+        for win in self.windows.values():
+            win.hide()
 
     def cb_monitors_changed(self, screen):
         #FIXME: This must handle changes and deletes in addition to adds.
@@ -775,6 +780,16 @@ class OSDWindow(RoundedWindow):
         self.label.modify_font(self.font)
         self.add(self.label)
 
+    def cb_timeout(self):
+        self.timeout_id = None
+        self.hide()
+        return False
+
+    def hide(self):
+        if self.timeout_id:
+            gobject.source_remove(self.timeout_id)
+        super(OSDWindow, self).hide()
+
     def message(self, text, timeout):
         self.label.set_text(text)
         self.show_all()
@@ -782,10 +797,6 @@ class OSDWindow(RoundedWindow):
         if self.timeout_id:
             gobject.source_remove(self.timeout_id)
         self.timeout_id = gobject.timeout_add_seconds(timeout, self.cb_timeout)
-
-    def cb_timeout(self):
-        self.hide()
-        return False
 
 class ModeButton(gtk.RadioButton):
     """Compact progress-button representing a timer mode."""

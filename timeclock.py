@@ -697,6 +697,8 @@ class OSDNaggerNotifier(gobject.GObject):
                 window.set_screen(screen)
                 window.set_gravity(gtk.gdk.GRAVITY_CENTER)
                 window.move(geom.x + geom.width/2, geom.y + geom.height/2)
+                #FIXME: Either fix the center gravity or calculate it manually
+                # (Might it be that the window hasn't been sized yet?)
                 self.windows[key] = window
 
     def notify_exhaustion(self, model, mode):
@@ -704,6 +706,7 @@ class OSDNaggerNotifier(gobject.GObject):
         for win in self.windows.values():
             #TODO: The message template should be separated.
             #TODO: I need to also display some kind of message expiry countdown
+            #XXX: Should I use a non-linear mapping for timeout?
             #FIXME: This doesn't yet get along with overtime.
             win.message("Timer Expired: %s" % mode.name,
                     abs(min(-5, mode.remaining() / 60)))
@@ -912,7 +915,7 @@ class MainWinCompact(RoundedWindow):
         self.model.connect('updated', self.update)
         self.model.connect('mode-changed', self.mode_changed)
         self.evbox.connect('button-release-event', self.showMenu)
-        # TODO: Make this work.
+        # TODO: Make this work so the Menu key works.
         #self.evbox.connect('popup-menu', self.showMenu)
 
         self.update(model)

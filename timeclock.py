@@ -321,7 +321,7 @@ class TimerModel(gobject.GObject):
         self.emit('updated')
 
     def notify_tick(self, mode):
-        self.emit('notify-tick', self.active)
+        self.emit('notify-tick', mode)
 
     def reset(self):
         """Reset all timers to starting values"""

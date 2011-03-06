@@ -415,7 +415,6 @@ class TimerModel(gobject.GObject):
                 classname = 'Mode'
 
             cls = globals()[classname]
-            print cls
             if cls in SAFE_MODE_CLASSES:
                 self.timers.append(cls(**data))
         #TODO: I need some way to trigger a re-build of the view's signal bindings.
@@ -703,7 +702,7 @@ class OSDNaggerNotifier(gobject.GObject):
             #TODO: I need to also display some kind of message expiry countdown
             #FIXME: This doesn't yet get along with overtime.
             win.message("Timer Expired: %s" % mode.name,
-                    max(1, abs(mode.remaining()) / 180))
+                    abs(min(-5, mode.remaining() / 60)))
 
 KNOWN_NOTIFY_MAP = {
         'audio': AudioNotifier,

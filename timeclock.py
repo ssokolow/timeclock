@@ -483,7 +483,9 @@ class TimerController(gobject.GObject):
         delta = now - self.last_tick
         notify_delta = now - self.last_notify
 
-        active.used += delta
+        selected.used += delta
+        if selected != active:
+            active.used += delta
 
         #TODO: Decide what to do if both selected and active are expired.
         if selected.remaining() <= 0 and notify_delta > 900:
@@ -491,16 +493,11 @@ class TimerController(gobject.GObject):
             self.last_notify = now
 
         if active.remaining() < 0:
-            overtime = abs(active.remaining())
             overflow_to = ([x for x in self.model.timers if x.name == active.overflow] or [None])[0]
             if overflow_to:
-                active.used = active.total
-                overflow_to.used += overtime
-                # TODO: Probably best to rethink to allow accurate
-                # record-keeping. (Maybe an additional field to track
-                # overflowed time so I can drain "total" rather than "used"
-                # without messing up stored settings)
                 self.model.active = overflow_to
+                #XXX: Is it worth fixing the pseudo-rounding error tick, delta,
+                # and mode-switching introduce?
 
         if now >= (self.model.last_save + SAVE_INTERVAL):
             self.model.save()
@@ -936,11 +933,7 @@ class MainWinCompact(RoundedWindow):
         self.update(model)
 
     def update(self, model):
-        """Common code used for initializing and updating the progress bars."""
-        #FIXME: Not ideal when overflow kicks in. Rethink.
-        # (Maybe fixable with my "don't actually make overflow reset the
-        # active timer" change for record-keeping.)
-        self.set_title(str(model.active))
+        self.set_title(str(model.selected))
 
     def showMenu(self, widget, event=None, data=None):
         if event:

@@ -15,6 +15,9 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
  - Switch to a JSON-based save format for easier reading/editing/debugging.
    (Given my heavy use of GObject signals, it's not as if I can take proper
    advantage of pickle anyway)
+ - Look into offering an IdleController mode for people who turn their PCs off.
+   - In fact, look into offering generic support for taking into account time
+     with the timeclock turned off.
  - Strip out all these super() calls since it's still easy to introduce subtle
    bugs by forgetting to super() to the top of every branch of the hierarchy.
  - Decide whether overflow_to should cascade.
@@ -32,7 +35,7 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
  - Report PyGTK's uncatchable xkill response on the bug tracker.
  - Explore how progress bars behave when their base colors are changed:
    (http://hg.atheme.org/audacious/audacious-plugins/diff/a25b618e8f4a/src/gtkui/ui_playlist_widget.c)
- - Look into offering an IdleController mode for people who turn their PCs off.
+ - Profile timeclock. Something this size shouldn't take 0.6% of an Athon 5000+
 
 @todo: Notification TODO:
  - Provide a fallback for when libnotify notifications are unavailable.
@@ -798,7 +801,7 @@ class OSDWindow(RoundedWindow):
 
         if self.timeout_id:
             gobject.source_remove(self.timeout_id)
-        self.timeout_id = gobject.timeout_add_seconds(timeout, self.cb_timeout)
+        self.timeout_id = gobject.timeout_add_seconds(int(timeout), self.cb_timeout)
 
 class ModeButton(gtk.RadioButton):
     """Compact progress-button representing a timer mode."""

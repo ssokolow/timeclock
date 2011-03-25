@@ -454,6 +454,12 @@ class TimerModel(gobject.GObject):
         pickle.dump( (CURRENT_SAVE_VERSION, data), fh)
         fh.close()
 
+        # Windows doesn't let you os.rename to overwrite.
+        # TODO: Find another way to atomically replace the state file.
+        # TODO: Decide what to do when self.save_file is a directory
+        if os.name == 'nt' and os.path.exists(self.save_file):
+                os.unlink(self.save_file)
+
         # Corruption from saving without atomic replace has been observed
         os.rename(self.save_file + '.tmp', self.save_file)
         self.last_save = time.time()
@@ -509,6 +515,8 @@ class TimerController(gobject.GObject):
 
 class IdleController(gobject.GObject):
     """A controller to automatically reset the timer if you fall asleep."""
+    watch_id, conn = None, None
+    
     def __init__(self, model):
         self.__gobject_init__()
         self._source_remove = gobject.source_remove
@@ -536,8 +544,10 @@ class IdleController(gobject.GObject):
             model.connect('updated', self.cb_updated)
 
     def __del__(self):
-        self._source_remove(self.watch_id)
-        self.conn.disconnect()
+        if self.watch_id:
+                self._source_remove(self.watch_id)
+        if self.conn:
+                self.conn.disconnect()
 
     def cb_updated(self, model):
         now = time.time()

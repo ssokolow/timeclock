@@ -126,6 +126,7 @@ except ImportError:
     pass
 
 import cairo, gtk, gobject, pango
+import gtk.gdk
 import gtk.glade
 
 import gtkexcepthook
@@ -935,6 +936,9 @@ class MainWinCompact(RoundedWindow):
         self.update(model)
         self.menu.show_all() #TODO: Is this line necessary?
         self.show_all()
+
+        # Drag handle cursor must be set after show_all()
+        handle_evbox.window.set_cursor(gtk.gdk.Cursor(gtk.gdk.FLEUR))
 
         # Set the icon after we know how much vert space the GTK theme gives us
         drag_handle.set_from_file(get_icon_path(

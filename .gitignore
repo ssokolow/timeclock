@@ -1,0 +1,5 @@
+# Ignores absent from a fresh GitExtensions install on Windows.
+*.py[co]
+build/
+dist/
+MANIFEST

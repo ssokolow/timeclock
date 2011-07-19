@@ -12,9 +12,6 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
  - Probably a good idea to write and share a wrapper
 
 @todo: Planned improvements:
- - Switch to a JSON-based save format for easier reading/editing/debugging.
-   (Given my heavy use of GObject signals, it's not as if I can take proper
-   advantage of pickle anyway)
  - Look into offering an IdleController mode for people who turn their PCs off.
    - In fact, look into offering generic support for taking into account time
      with the timeclock turned off.
@@ -30,19 +27,14 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
    the existing instance if one is already running.
  - Figure out some intuitive, non-distracting way to allow the user to make
    corrections. (eg. you forgot to set the timer to leisure before going AFK)
- - Should I offer preferences options for remembering window position and such
-   like "always on top" and "on all desktops"?
  - Report PyGTK's uncatchable xkill response on the bug tracker.
  - Explore how progress bars behave when their base colors are changed:
    (http://hg.atheme.org/audacious/audacious-plugins/diff/a25b618e8f4a/src/gtkui/ui_playlist_widget.c)
  - Profile timeclock. Something this size shouldn't take 0.6% of an Athon 5000+
 
 @todo: Notification TODO:
- - Provide a fallback for when libnotify notifications are unavailable.
-   (eg. Windows and Slax LiveCD/LiveUSB desktops)
  - Offer to turn the timer text a user-specified color (default: red) when it
    goes into negative values.
- - Finish the preferences page.
  - Set up a callback for timer exhaustion.
  - Handle popup notifications more intelligently (eg. Explicitly hide them when
    switching away from an expired timer and explicitly show them when switching

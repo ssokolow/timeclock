@@ -898,8 +898,11 @@ class MainWinCompact(RoundedWindow):
             model.connect('mode-changed', btn.mode_changed)
 
         drag_handle = gtk.Image()
+        handle_evbox = gtk.EventBox()
 
-        self.box.add(drag_handle)
+        handle_evbox.add(drag_handle)
+        self.box.add(handle_evbox)
+
         self.box.add(self.btnbox)
 
         self.evbox.add(self.box)
@@ -917,6 +920,7 @@ class MainWinCompact(RoundedWindow):
         self.evbox.connect('button-release-event', self.showMenu)
         # TODO: Make this work so the Menu key works.
         #self.evbox.connect('popup-menu', self.showMenu)
+        handle_evbox.connect('button-press-event', self.handle_pressed)
 
         self.update(model)
         self.menu.show_all() #TODO: Is this line necessary?
@@ -931,6 +935,17 @@ class MainWinCompact(RoundedWindow):
         """Callback for clicking the timer-selection radio buttons"""
         if widget.get_active() and not self.model.selected == widget.mode:
             self.model.selected = widget.mode
+
+    def handle_pressed(self, widget, event):
+        """If possible, let the WM do window dragging
+        Sources:
+         - http://www.gtkforums.com/viewtopic.php?t=1822
+         - http://www.pygtk.org/docs/pygtk/class-gtkwindow.html#method-gtkwindow--begin-move-drag
+        """
+        # we only want dragging via LMB (eg. preserve context menu)
+        if event.button != 1:
+            return False
+        self.begin_move_drag(event.button, int(event.x_root), int(event.y_root), event.time)
 
     def mode_changed(self, model, mode):
         self.update(model)

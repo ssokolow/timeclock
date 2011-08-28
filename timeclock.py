@@ -512,7 +512,7 @@ class TimerController(gobject.GObject):
 class IdleController(gobject.GObject):
     """A controller to automatically reset the timer if you fall asleep."""
     watch_id, conn = None, None
-    
+
     def __init__(self, model):
         self.__gobject_init__()
         self._source_remove = gobject.source_remove
@@ -874,6 +874,7 @@ class MainWinCompact(RoundedWindow):
     def __init__(self, model):
         super(MainWinCompact, self).__init__()
         self.set_icon_from_file(get_icon_path(64))
+        self.set_resizable(False)
 
         self.model = model
         self.evbox = gtk.EventBox()

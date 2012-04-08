@@ -1,0 +1,39 @@
+body {
+    margin-top: 1.0em;
+    background-color: #0c0c0c;
+    font-family: "sans-serif";
+    color: #eeeeee;
+}
+#container {
+    margin: 0 auto;
+    width: 700px;
+}
+h1, h2, h3, a, dt { color: #f54673; }
+
+h1 {
+    font-size: 180%;
+    color: #f54673;
+    margin: 1.4em 0 1em 0;
+    padding-top: 1.5ex;
+}
+h1 .small {
+    font-size: 0.4em;
+    display: block;
+}
+h1 a { text-decoration: none }
+h2 { font-size: 1.5em; }
+h3 { text-align: center; }
+dt { font-weight: bold; }
+dd ul { padding-left: 0; }
+img { border-width: 0; }
+.ribbon { position: absolute; top: 0; right: 0; border: 0; }
+.description { margin-bottom: 30px; margin-top: 30px; }
+.description .begin { font-size: 1.2em; font-style: italic; }
+.download { float: right; }
+.screenshot { text-align: center; }
+.ohloh_btn { float: right; }
+pre { background: #000; color: #fff; padding: 15px;}
+hr { border: 0; width: 80%; border-bottom: 1px solid #aaa}
+.footer { text-align:center; padding-top:30px; font-style: italic; }
+.footer img { vertical-align: top; }
+.filename { font-family: monospace; }

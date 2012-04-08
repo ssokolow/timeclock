@@ -1,108 +1,51 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
-<head>
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-
-	<title>The Procrastinator's Timeclock @ GitHub</title>
-
-	<style type="text/css">
-		body {
-  		margin-top: 1.0em;
-  		background-color: #0c0c0c;
-		  font-family: "sans-serif";
-  		color: #eeeeee;
-    }
-    #container {
-      margin: 0 auto;
-      width: 700px;
-  }
-		h1, h2, h3, a, dt { color: #f54673; }
-
-		h1 { font-size: 180%; color: #f54673; margin: 1.4em 0 1em 0;
-			padding-top: 1.5ex;}
-		h1 .small { font-size: 0.4em; display: block; }
-		h1 a { text-decoration: none }
-		h2 { font-size: 1.5em; }
-		h3 { text-align: center; }
-		dt { font-weight: bold; }
-		dd ul { padding-left: 0; }
-		img { border-width: 0; }
-		.ribbon { position: absolute; top: 0; right: 0; border: 0; }
-		.description { margin-bottom: 30px; margin-top: 30px; }
-		.description .begin { font-size: 1.2em; font-style: italic; }
-		.download { float: right; }
-		.screenshot { text-align: center; }
-		.ohloh_btn { float: right; }
-		pre { background: #000; color: #fff; padding: 15px;}
-		hr { border: 0; width: 80%; border-bottom: 1px solid #aaa}
-		.footer { text-align:center; padding-top:30px; font-style: italic; }
-		.footer img { vertical-align: top; }
-	</style>
-
-	<script type="text/javascript" src="jquery_lightbox/js/jquery-1.3.2.min.js"></script>
-	<script type="text/javascript"
-		src="jquery_lightbox/js/jquery.lightbox.min.js?ie6_upgrade=false&amp;show_info=true&amp;show_linkback=false&amp;opacity=0.7&amp;download_link=false&amp;auto_resize=false&amp;show_extended_info=true"></script>
-
-	<link rel="icon" type="image/vnd.microsoft.icon" href="favicon.ico" />
-
-</head>
-
-<body>
-	<div class="ribbon"><a href="http://github.com/ssokolow/timeclock"><img src="http://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub" /></a></div>
-
-  <div id="container">
-
-    <div class="download">
-      <a href="http://github.com/ssokolow/timeclock/zipball/master">
-        <img width="80" src="images/zip.png" alt="Zip" /></a>
-      <a href="http://github.com/ssokolow/timeclock/tarball/master">
-        <img width="80" src="images/tar.png" alt="Tar" /></a>
-    </div>
-
-	<h1><a href="http://github.com/ssokolow/timeclock">The Procrastinator's
-			Timeclock</a>
-		<span class="small">by <a href="http://github.com/ssokolow">ssokolow</a></span></h1>
-	<div class="screenshot"><img src="images/timeclock.png" width="480" height="139" alt="screenshot" /></div>
+---
+layout: default
+title: Main
+---
+    <div class="screenshot"><img src="images/timeclock.png" width="480" height="139" alt="screenshot" /></div>
     <div class="description">
-		<div class="begin">A minimal-hassle way to manage your time</div>
-		...especially if you suffer from an over-abundance of "just one more
-		thing".
+        <div class="begin">A minimal-hassle way to manage your time</div>
+        ...especially if you suffer from an over-abundance of "just one more
+        thing".
     </div>
 
-	<dl>
-		<dt>Features</dt>
-		<dd><ul>
-			<li>Simple, intuitive design <a href="images/timeclock.png"
-				rel="lightbox-features" title="Timeclock's simple design gives
-				you minimal opportunity to use it as a distraction."></a></li>
-			<li>Galago/libnotify timer-expiry notifications
-			(<a href="images/notification_sshot.png" rel="lightbox-features"
-				title="Timer-expiry notifications use the popular libnotify API and remain
-				until dismissed.">Screenshot</a>)</li>
-			<li>Timer-expiry notifications are re-displayed every 15 minutes as a
-			non-intrusive but insistent reminder.</li>
-		</ul></dd>
-		<dt>Dependencies</dt>
-		<dd><a href="http://python.org/">Python</a> 2.4+, <a href="http://pygtk.org/">PyGTK</a> 2.x, and (optional) <a
-			href="http://galago-project.org/">notify-python</a>.</dd>
-		<dt>Caveats</dt>
-		<dd>Currently only tested on Linux. Minimum required dependency versions
-		not yet confirmed.</dd>
-		<dt>Installation</dt>
-		<dd>Simply unpack and run timeclock.py. No installation required.</dd>
-		<dt>License</dt>
-		<dd>GNU GPL 2.0 or later</dd>
-		<dt>Authors</dt>
-		<dd><ul>
-			<li><a href="http://github.com/ssokolow">deitarion/SSokolow</a> (Stephan Sokolow)</li>
-			<li><a href="http://github.com/FunnyMan3595">FunnyMan3595</a> (Charlie Nolan)</li>
-		</ul></dd>
-	</dl>
+    <dl>
+        <dt>Features</dt>
+        <dd><ul>
+            <li>Simple, intuitive design <a href="images/timeclock.png"
+                rel="lightbox-features" title="Timeclock's simple design gives
+                you minimal opportunity to use it as a distraction."></a></li>
+            <li>Galago/libnotify timer-expiry notifications
+            (<a href="images/notification_sshot.png" rel="lightbox-features"
+                title="Timer-expiry notifications use the popular libnotify API and remain
+                until dismissed.">Screenshot</a>)</li>
+            <li>Timer-expiry notifications are re-displayed every 15 minutes as a
+            non-intrusive but insistent reminder.</li>
+        </ul></dd>
+        <dt>Dependencies</dt>
+        <dd><a href="http://python.org/">Python</a> 2.4+, <a href="http://pygtk.org/">PyGTK</a> 2.x, and (optional) <a
+            href="http://galago-project.org/">notify-python</a>.</dd>
+        <dt>Caveats</dt>
+        <dd>Currently only tested on Linux. Minimum required dependency versions
+        not yet confirmed.</dd>
+        <dt>Installation</dt>
+        <dd>Simply unpack and run timeclock.py. No installation required.</dd>
+        <dt>License</dt>
+        <dd>GNU GPL 2.0 or later</dd>
+        <dt>Documentation</dt>
+        <dd><ul>
+            <li><a class="filename" href="https://github.com/ssokolow/timeclock">README</a></li>
+            <li><a href="faq.html">FAQ/PAQ</a></li>
+        </ul></dd>
+        <dt>Authors</dt>
+        <dd><ul>
+            <li><a href="http://github.com/ssokolow">deitarion/SSokolow</a> (Stephan Sokolow)</li>
+            <li><a href="http://github.com/FunnyMan3595">FunnyMan3595</a> (Charlie Nolan)</li>
+        </ul></dd>
+    </dl>
 
-	<div class="ohloh_btn"><script type="text/javascript"
-			src="http://www.ohloh.net/p/347803/widgets/project_users.js?style=gray"></script></div>
+    <div class="ohloh_btn"><script type="text/javascript"
+            src="http://www.ohloh.net/p/347803/widgets/project_users.js?style=gray"></script></div>
     <h2>Download</h2>
     <p>
       You can download this project in either
@@ -110,28 +53,11 @@
       <a href="http://github.com/ssokolow/timeclock/tarball/master">tar</a> formats.
     </p>
     <p>You can also clone the project with <a href="http://git-scm.com">Git</a>
-	by running:</p>
-	  <pre>$ git clone git://github.com/ssokolow/timeclock</pre>
+    by running:</p>
+      <pre>$ git clone git://github.com/ssokolow/timeclock</pre>
 
 
     <div class="footer">
       <img src="images/wrench.png" alt=""/>
       Report issues and browse the commit history on GitHub : <a href="http://github.com/ssokolow/timeclock">ssokolow/timeclock</a>
     </div>
-
-  </div>
-
-<!-- Piwik -->
-<script type="text/javascript">
-var pkBaseURL = (("https:" == document.location.protocol) ? "https://blog.ssokolow.com/stats/" : "http://blog.ssokolow.com/stats/");
-document.write(unescape("%3Cscript src='" + pkBaseURL + "piwik.js' type='text/javascript'%3E%3C/script%3E"));
-</script><script type="text/javascript">
-try {
-var piwikTracker = Piwik.getTracker(pkBaseURL + "piwik.php", 6);
-piwikTracker.trackPageView();
-piwikTracker.enableLinkTracking();
-} catch( err ) {}
-</script><noscript><p><img src="http://blog.ssokolow.com/stats/piwik.php?idsite=6" style="border:0" alt="" /></p></noscript>
-<!-- End Piwik Tracking Code -->
-</body>
-</html>

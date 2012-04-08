@@ -47,6 +47,11 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
  - http://gtk-apps.org/
  - http://pypi.python.org/pypi
 
+@todo: Make use of these references:
+ - http://www.pygtk.org/articles/writing-a-custom-widget-using-pygtk/writing-a-custom-widget-using-pygtk.htm
+ - http://unpythonic.blogspot.com/2007/03/custom-pygtk-widgets-in-glade3-part-2.html
+ - https://live.gnome.org/Vala/CustomWidgetSamples
+
 @newfield appname: Application Name
 """
 
@@ -124,6 +129,8 @@ import gtk.glade
 import gtkexcepthook
 
 # Known generated icon sizes.
+# TODO: Rewrite this to use Gtk's IconTheme support if present.
+# (What DOES happen on Windows with that?)
 ICON_SIZES = [16, 22, 32, 48, 64]
 def get_icon_path(size):
     """Return the path to the largest Timeclock icon which fits in ``size``."""

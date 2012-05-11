@@ -44,7 +44,15 @@ img { border-width: 0; }
 .description .begin { font-size: 1.2em; font-style: italic; }
 .download { float: right; }
 .screenshot { text-align: center; }
-.ohloh_btn { float: right; }
+.flattr_btn {
+    float: right;
+    margin-left: 0.5ex;
+    margin-right: 0.5ex;
+}
+.flattr_btn .gitforked-button-container {
+    display: block;
+    margin: 1.5em auto 1ex;
+}
 pre { background: #000; color: #fff; padding: 15px;}
 hr { border: 0; width: 80%; border-bottom: 1px solid #aaa}
 .footer { text-align:center; padding-top:30px; font-style: italic; }

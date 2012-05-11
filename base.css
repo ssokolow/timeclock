@@ -1,6 +1,6 @@
 body {
     margin-top: 1.0em;
-    background-color: #0c0c0c;
+    background-color: #101010;
     font-family: "sans-serif";
     color: #eeeeee;
 }
@@ -25,6 +25,19 @@ h2 { font-size: 1.5em; }
 h3 { text-align: center; }
 dt { font-weight: bold; }
 dd ul { padding-left: 0; }
+pre {
+    padding: 15px;
+    border-radius: 1ex;
+    background: black;
+    color: white;
+
+    -moz-border-radius: 1ex;
+    -webkit-border-radius: 1ex;
+
+    box-shadow: inset 2px 3px 5px black, 0px 1px 1px #333;
+    -moz-box-shadow: inset 2px 3px 5px black, 0px 1px 1px #333;
+    -webkit-box-shadow: inset 2px 3px 5px black, 0px 1px 1px #333;
+}
 img { border-width: 0; }
 .ribbon { position: absolute; top: 0; right: 0; border: 0; }
 .description { margin-bottom: 30px; margin-top: 30px; }

@@ -591,6 +591,7 @@ class LibNotifyNotifier(gobject.GObject):
     :todo: Redesign this on an abstraction over Growl, libnotify, and toasts.
     """
     pynotify = None
+    error_dialog = None
 
     def __init__(self, model):
         # ImportError should be caught when instantiating this.
@@ -623,7 +624,18 @@ class LibNotifyNotifier(gobject.GObject):
 
     def notify_exhaustion(self, mode):
         """Display a libnotify notification that the given timer has expired"""
-        self.notifications[mode.name].show()
+        try:
+            self.notifications[mode.name].show()
+        except gobject.GError:
+            if not self.error_dialog:
+                self.error_dialog = gtk.MessageDialog(
+                        type=gtk.MESSAGE_ERROR,
+                        buttons=gtk.BUTTONS_CLOSE)
+                self.error_dialog.set_markup("Failed to display a notification."
+                        "\nMaybe your notification daemon crashed.")
+                self.error_dialog.connect("response",
+                        lambda widget, data=None: widget.hide())
+            self.error_dialog.show()
 
 class AudioNotifier(gobject.GObject):
     """An audio timer expiry notification based on a portability layer."""

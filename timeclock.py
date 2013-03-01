@@ -100,11 +100,11 @@ if not os.path.isdir(DATA_DIR):
         os.makedirs(DATA_DIR)
     except OSError:
         raise SystemExit("Aborting: %s exists but is not a directory!"
-                               % DATA_DIR)
+                         % DATA_DIR)
 
 SAVE_INTERVAL = 60 * 5  # 5 Minutes
 SLEEP_RESET_INTERVAL = 3600 * 6  # 6 hours
-NOTIFY_INTERVAL = 60 * 15 # 15 Minutes
+NOTIFY_INTERVAL = 60 * 15  # 15 Minutes
 
 NOTIFY_SOUND = os.path.join(
         os.path.dirname(os.path.realpath(__file__)),
@@ -143,11 +143,11 @@ def get_icon_path(size):
             "timeclock_%dx%d.png" % (size, size))
 
 class SingleInstance:
-    """http://stackoverflow.com/questions/380870/python-single-instance-of-program/1265445#1265445"""
+    """Source: http://stackoverflow.com/a/1265445/435253"""
     def __init__(self, useronly=True, lockfile=None, lockname=None):
         """
-        :param useronly: Allow one instance per user rather than one instance overall.
-            (On Windows, this is always True)
+        :param useronly: Allow one instance per user rather than one instance
+            overall. (On Windows, this is always True)
         :param lockfile: Specify an explicit path for the lockfile.
         :param lockname: Specify a filename to be used for the lockfile when
             ``lockfile`` is ``None``. The usual location selection algorithms
@@ -178,21 +178,21 @@ class SingleInstance:
 
         self.lockfile = os.path.normpath(os.path.normcase(self.lockfile))
 
-        if self.platform == 'win32': #TODO: What about Win64? os.name == 'nt'?
+        if self.platform == 'win32':  # TODO: What for Win64? os.name == 'nt'?
             try:
                 # file already exists, we try to remove
                 # (in case previous execution was interrupted)
                 if(os.path.exists(self.lockfile)):
                     os.unlink(self.lockfile)
                 self.fd = os.open(self.lockfile,
-                        os.O_CREAT|os.O_EXCL|os.O_RDWR)
+                        os.O_CREAT | os.O_EXCL | os.O_RDWR)
             except OSError, e:
                 if e.errno == 13:
                     print "Another instance is already running, quitting."
                     _sys.exit(-1)
                 print e.errno
                 raise
-        else: # non Windows
+        else:  # non Windows
             import fcntl
             self.fp = open(self.lockfile, 'w')
             try:
@@ -220,10 +220,12 @@ def signalled_property(propname, signal_name):
     def pget(self):
         """Default getter"""
         return getattr(self, propname)
+
     def pset(self, value):
         """Default setter plus signal emit"""
         setattr(self, propname, value)
         self.emit(signal_name)
+
     def pdel(self):
         """Default deleter"""
         delattr(self, propname)
@@ -276,7 +278,7 @@ class Mode(gobject.GObject):
                 'total': self.total,
                 'used': self.used,
                 'overflow': self.overflow,
-            }
+        }
 
     def notify_tick(self):
         self.emit('notify-tick')
@@ -284,13 +286,15 @@ class Mode(gobject.GObject):
 class UnlimitedMode(Mode):
     """Data and operations for modes like Asleep"""
     show = False
+
     def __str__(self):
         return self.name
+
     def remaining(self):
-        return 1 #TODO: Decide on a better way to do this.
+        return 1  # TODO: Decide on a better way to do this.
 
 SAFE_MODE_CLASSES = [Mode, UnlimitedMode]
-CURRENT_SAVE_VERSION = 6 #: Used for save file versioning
+CURRENT_SAVE_VERSION = 6  #: Used for save file versioning
 class TimerModel(gobject.GObject):
     """Model class which still needs more refactoring."""
     __gsignals__ = {
@@ -311,7 +315,8 @@ class TimerModel(gobject.GObject):
         # IMPORTANT: _load() MUST be called before signals are bound.
 
         #TODO: Still need to add "Asleep as an explicit mode" migration.
-        self.start_mode = ([x for x in self.timers if x.name == start_mode] or [self.timers[0]])[0]
+        self.start_mode = ([x for x in self.timers if x.name == start_mode] or
+                [self.timers[0]])[0]
         self._selected = self.start_mode
         self.active = self.start_mode
 
@@ -358,7 +363,7 @@ class TimerModel(gobject.GObject):
                     # Upgrade legacy configs with overflow
                     _ohead = [x for x in timers if x['name'] == 'Overhead']
                     if _ohead and not _ohead.get('overflow'):
-                        _ohead['overflow'] =  'Leisure'
+                        _ohead['overflow'] = 'Leisure'
                 elif version == 4:
                     version, total, used, notify, win_state = loaded
                 elif version == 3:
@@ -372,10 +377,10 @@ class TimerModel(gobject.GObject):
                     version, total_old, used_old = loaded
                     translate = ["N/A", "btn_overheadMode", "btn_workMode",
                                  "btn_playMode"]
-                    total = dict( (translate.index(key), value)
-                                  for key, value in total_old.items() )
-                    used = dict( (translate.index(key), value)
-                                 for key, value in used_old.items() )
+                    total = dict((translate.index(key), value)
+                                 for key, value in total_old.items())
+                    used = dict((translate.index(key), value)
+                                for key, value in used_old.items())
                     notify = True
                     #win_state = {}
                 else:
@@ -388,9 +393,9 @@ class TimerModel(gobject.GObject):
                     timers = []
                     for pos, row in enumerate(zip(total, used)):
                         timers.append({
-                            'name' : MODE_NAMES[pos],
+                            'name': MODE_NAMES[pos],
                             'total': row[0],
-                            'used' : row[1],
+                            'used': row[1],
                         })
 
                 # Sanity checking could go here.
@@ -424,6 +429,7 @@ class TimerModel(gobject.GObject):
     #TODO: Reimplement using signalled_property and a signal connect.
     def _get_selected(self):
         return self._selected
+
     def _set_selected(self, mode):
         self._selected = mode
         self.active = mode
@@ -454,7 +460,7 @@ class TimerModel(gobject.GObject):
 
         # Don't rely on CPython's refcounting or Python 2.5's "with"
         fh = open(self.save_file + '.tmp', "wb")
-        pickle.dump( (CURRENT_SAVE_VERSION, data), fh)
+        pickle.dump((CURRENT_SAVE_VERSION, data), fh)
         fh.close()
 
         # Windows doesn't let you os.rename to overwrite.
@@ -501,7 +507,8 @@ class TimerController(gobject.GObject):
             self.last_notify = now
 
         if active.remaining() < 0:
-            overflow_to = ([x for x in self.model.timers if x.name == active.overflow] or [None])[0]
+            overflow_to = ([x for x in self.model.timers
+                if x.name == active.overflow] or [None])[0]
             if overflow_to:
                 self.model.active = overflow_to
                 #XXX: Is it worth fixing the pseudo-rounding error tick, delta,
@@ -581,7 +588,7 @@ class IdleController(gobject.GObject):
             # In testing, IOError is raised when no events are available.
             pass
 
-        return True # Keep the callback registered.
+        return True  # Keep the callback registered.
 
 #{ Notification Modules
 
@@ -631,7 +638,7 @@ class LibNotifyNotifier(gobject.GObject):
                 self.error_dialog = gtk.MessageDialog(
                         type=gtk.MESSAGE_ERROR,
                         buttons=gtk.BUTTONS_CLOSE)
-                self.error_dialog.set_markup("Failed to display a notification."
+                self.error_dialog.set_markup("Failed to display a notification"
                         "\nMaybe your notification daemon crashed.")
                 self.error_dialog.connect("response",
                         lambda widget, data=None: widget.hide())
@@ -666,7 +673,7 @@ class AudioNotifier(gobject.GObject):
 
         #TODO: Fall back to using winsound or wave+ossaudiodev or maybe pygame
         #TODO: Design a generic wrapper which also tries things like these:
-        # - http://stackoverflow.com/questions/276266/whats-a-cross-platform-way-to-play-a-sound-file-in-python
+        # - http://stackoverflow.com/q/276266/435253
         # - http://stackoverflow.com/questions/307305/play-a-sound-with-python
 
     def notify_exhaustion(self, model, mode):
@@ -690,7 +697,7 @@ class OSDNaggerNotifier(gobject.GObject):
         display_manager.connect("display-opened", self.cb_display_opened)
 
     def cb_display_closed(self, display, is_error):
-        pass #TODO: Dereference and destroy the corresponding OSDWindows.
+        pass  # TODO: Dereference and destroy the corresponding OSDWindows.
 
     def cb_display_opened(self, manager, display):
         for screen_num in range(0, display.get_n_screens()):
@@ -717,7 +724,7 @@ class OSDNaggerNotifier(gobject.GObject):
                 window = OSDWindow()
                 window.set_screen(screen)
                 window.set_gravity(gtk.gdk.GRAVITY_CENTER)
-                window.move(geom.x + geom.width/2, geom.y + geom.height/2)
+                window.move(geom.x + geom.width / 2, geom.y + geom.height / 2)
                 #FIXME: Either fix the center gravity or calculate it manually
                 # (Might it be that the window hasn't been sized yet?)
                 self.windows[key] = window
@@ -751,7 +758,7 @@ class RoundedWindow(gtk.Window):
 
     def rounded_rectangle(self, cr, x, y, w, h, r=20):
         """Draw a rounded rectangle using Cairo.
-        Source: http://stackoverflow.com/questions/2384374/rounded-rectangle-in-pygtk
+        Source: http://stackoverflow.com/q/2384374/435253
 
         This is just one of the samples from
         http://www.cairographics.org/cookbook/roundedrectangles/
@@ -762,15 +769,15 @@ class RoundedWindow(gtk.Window):
           F****E
         """
 
-        cr.move_to(x+r, y)                          # Move to A
-        cr.line_to(x+w-r, y)                        # Straight line to B
-        cr.curve_to(x+w, y, x+w, y, x+w, y+r)       # Curve to C, Ctrl pts at Q
-        cr.line_to(x+w, y+h-r)                      # Move to D
-        cr.curve_to(x+w, y+h, x+w, y+h, x+w-r, y+h) # Curve to E
-        cr.line_to(x+r, y+h)                        # Line to F
-        cr.curve_to(x, y+h, x, y+h, x, y+h-r)       # Curve to G
-        cr.line_to(x, y+r)                          # Line to H
-        cr.curve_to(x, y, x, y, x+r, y)             # Curve to A
+        cr.move_to(x + r, y)                         # Move to A
+        cr.line_to(x + w - r, y)                     # Straight line to B
+        cr.curve_to(x + w, y, x + w, y, x + w, y+r)  # Curve to C, Ctrl pts @ Q
+        cr.line_to(x + w, y + h - r)                 # Move to D
+        cr.curve_to(x+w, y+h, x+w, y+h, x+w-r, y+h)  # Curve to E
+        cr.line_to(x + r, y + h)                     # Line to F
+        cr.curve_to(x, y + h, x, y + h, x, y + h-r)  # Curve to G
+        cr.line_to(x, y + r)                         # Line to H
+        cr.curve_to(x, y, x, y, x + r, y)            # Curve to A
 
     def _on_size_allocate(self, win, allocation):
         w, h = allocation.width, allocation.height
@@ -909,7 +916,7 @@ class MainWinCompact(RoundedWindow):
             if mode.show:
                 self.btnbox.add(btn)
             else:
-                pass #TODO: Hook up signals to share state with RadioMenuItem
+                pass  # TODO: Hook up signals to share state with RadioMenuItem
                 # RadioMenuItem can't share a group with RadioButton
                 # ...so we fake it using hidden group members and signals.
 
@@ -946,7 +953,7 @@ class MainWinCompact(RoundedWindow):
         handle_evbox.connect('button-press-event', self.handle_pressed)
 
         self.update(model)
-        self.menu.show_all() #TODO: Is this line necessary?
+        self.menu.show_all()  # TODO: Is this line necessary?
         self.show_all()
 
         # Drag handle cursor must be set after show_all()
@@ -966,12 +973,14 @@ class MainWinCompact(RoundedWindow):
         """If possible, let the WM do window dragging
         Sources:
          - http://www.gtkforums.com/viewtopic.php?t=1822
-         - http://www.pygtk.org/docs/pygtk/class-gtkwindow.html#method-gtkwindow--begin-move-drag
+         - http://www.pygtk.org/docs/pygtk/class-gtkwindow.html
         """
         # we only want dragging via LMB (eg. preserve context menu)
         if event.button != 1:
             return False
-        self.begin_move_drag(event.button, int(event.x_root), int(event.y_root), event.time)
+        self.begin_move_drag(event.button,
+                int(event.x_root), int(event.y_root),
+                event.time)
 
     def mode_changed(self, model, mode):
         self.update(model)
@@ -1012,12 +1021,12 @@ class TimeClock(object):
         self.saved_state = {}
 
         # Connect signals
-        mDic = { "on_mode_toggled"    : self.btn_toggled,
-                 "on_reset_clicked"   : self.cb_reset,
-                 "on_mainWin_destroy" : gtk.main_quit,
-                 "on_prefs_clicked"   : self.prefs_clicked }
-        pDic = { "on_prefs_commit"    : self.prefs_commit,
-                 "on_prefs_cancel"    : self.prefs_cancel }
+        mDic = {"on_mode_toggled"    : self.btn_toggled,
+                "on_reset_clicked"   : self.cb_reset,
+                "on_mainWin_destroy" : gtk.main_quit,
+                "on_prefs_clicked"   : self.prefs_clicked}
+        pDic = {"on_prefs_commit"    : self.prefs_commit,
+                "on_prefs_cancel"    : self.prefs_cancel}
         self.mTree.signal_autoconnect(mDic)
         self.pTree.signal_autoconnect(pDic)
 
@@ -1101,7 +1110,7 @@ class TimeClock(object):
         """Callback for the preferences button"""
         # Set the spin widgets to the current settings.
         for mode in self.model.timers:
-            widget_spin =  'spinBtn_%sMode' % mode.name.lower()
+            widget_spin = 'spinBtn_%sMode' % mode.name.lower()
             widget = self.pTree.get_widget(widget_spin)
             widget.set_value(mode.total / 3600.0)
 
@@ -1122,7 +1131,7 @@ class TimeClock(object):
         """Callback for OKing changes to the preferences"""
         # Update the time settings for each mode.
         for mode in self.model.timers:
-            widget_spin =  'spinBtn_%sMode' % mode.name.lower()
+            widget_spin = 'spinBtn_%sMode' % mode.name.lower()
             widget = self.pTree.get_widget(widget_spin)
             mode.total = (widget.get_value() * 3600)
 
@@ -1232,7 +1241,7 @@ def main():
 
     # Make sure sys.exitfunc gets called on Ctrl+C
     try:
-        gtk.main() # TODO: Find some way to hook a lost X11 connection too.
+        gtk.main()  # TODO: Find some way to hook a lost X11 connection too.
     except KeyboardInterrupt:
         sys.exit(0)
 

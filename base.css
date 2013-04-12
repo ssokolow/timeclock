@@ -1,5 +1,4 @@
-body {
-    margin-top: 1.0em;
+html body {
     background-color: #101010;
     font-family: "sans-serif";
     color: #eeeeee;
@@ -55,6 +54,6 @@ img { border-width: 0; }
 }
 pre { background: #000; color: #fff; padding: 15px;}
 hr { border: 0; width: 80%; border-bottom: 1px solid #aaa}
-.footer { text-align:center; padding-top:30px; font-style: italic; }
+.footer { text-align:center; padding: 30px 0; font-style: italic; }
 .footer img { vertical-align: top; }
 .filename { font-family: monospace; }

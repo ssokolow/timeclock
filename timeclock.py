@@ -12,6 +12,8 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
  - Probably a good idea to write and share a wrapper
 
 @todo: Planned improvements:
+ - Amend SingleInstance to show() and/or raise() a provided main window if none
+   is found.
  - Look into offering an IdleController mode for people who turn their PCs off.
    - In fact, look into offering generic support for taking into account time
      with the timeclock turned off.

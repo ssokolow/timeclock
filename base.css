@@ -50,8 +50,9 @@ img { border-width: 0; }
 }
 .flattr_btn .gitforked-button-container {
     display: block;
-    margin: 1.5em auto 1ex;
+    margin: 0 auto 1ex;
 }
+.flattr_btn .gitforked-bubble-inner { min-width: 35px; text-align: center; }
 pre { background: #000; color: #fff; padding: 15px;}
 hr { border: 0; width: 80%; border-bottom: 1px solid #aaa}
 .footer { text-align:center; padding: 30px 0; font-style: italic; }

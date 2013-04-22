@@ -38,6 +38,11 @@ pre {
     -webkit-box-shadow: inset 2px 3px 5px black, 0px 1px 1px #333;
 }
 img { border-width: 0; }
+
+/* After-nick icons */
+.gittip_head, .gittip_body { margin: auto -2px; }
+.gittip_body { vertical-align: middle; }
+.gittip_head { vertical-align: bottom; }
 .ribbon { position: absolute; top: 0; right: 0; border: 0; }
 .description { margin-bottom: 30px; margin-top: 30px; }
 .description .begin { font-size: 1.2em; font-style: italic; }

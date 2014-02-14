@@ -1,3 +1,10 @@
+The Procrastinator's Timeclock
+==============================
+
+.. image:: https://badge.waffle.io/ssokolow/timeclock.png?label=ready%20to%20implement
+   :target: http://waffle.io/ssokolow/timeclock
+   :alt: Bugs and Feature Requests
+
 The Procrastinator's Timeclock is a simple application designed to help
 easily-distracted people remain focused on getting a certain amount of work done
 per day while remaining flexible enough to adapt to changes in motivation, mood,

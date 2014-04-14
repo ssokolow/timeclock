@@ -248,7 +248,7 @@ class Mode(gobject.GObject):
     show = True
 
     def __init__(self, name, total, used=0, overflow=None):
-        self.__gobject_init__()
+        super(Mode, self).__init__()
 
         self._name = name
         self._total = total
@@ -306,7 +306,7 @@ class TimerModel(gobject.GObject):
     }
 
     def __init__(self, start_mode=None, save_file=SAVE_FILE):
-        self.__gobject_init__()
+        super(TimerModel, self).__init__()
 
         self.last_save = 0
         self.save_file = save_file
@@ -481,7 +481,7 @@ class TimerModel(gobject.GObject):
 class TimerController(gobject.GObject):
     """The default timer behaviour for the timeclock."""
     def __init__(self, model):
-        self.__gobject_init__()
+        super(TimerController, self).__init__()
 
         self.model = model
         self.last_tick = time.time()
@@ -530,7 +530,7 @@ class IdleController(gobject.GObject):
     watch_id, conn = None, None
 
     def __init__(self, model):
-        self.__gobject_init__()
+        super(IdleController, self).__init__()
         self._source_remove = gobject.source_remove
         #See SingleInstance for rationale
 
@@ -608,7 +608,7 @@ class LibNotifyNotifier(gobject.GObject):
         from xml.sax.saxutils import escape as xmlescape
 
         # Do this second because I'm unfamiliar with GObject refcounting.
-        self.__gobject_init__()
+        super(LibNotifyNotifier, self).__init__()
 
         # Only init PyNotify once
         if not self.pynotify:
@@ -660,7 +660,7 @@ class AudioNotifier(gobject.GObject):
             sys.argv = _argv
 
         self.gst = gst
-        self.__gobject_init__()
+        super(AudioNotifier, self).__init__()
 
         self.last_notified = 0
         self.uri = NOTIFY_SOUND
@@ -686,7 +686,7 @@ class AudioNotifier(gobject.GObject):
 class OSDNaggerNotifier(gobject.GObject):
     """A timer expiry notification view based on an unmanaged window."""
     def __init__(self, model):
-        self.__gobject_init__()
+        super(OSDNaggerNotifier, self).__init__()
 
         self.windows = {}
 

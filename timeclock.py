@@ -68,25 +68,25 @@ __license__ = "GNU GPL 2.0 or later"
 default_timers = [
     {
         'class': 'UnlimitedMode',
-        'name' : 'Asleep',
+        'name': 'Asleep',
         'total': int(3600 * 8),
-        'used' : 0,
+        'used': 0,
     },
     {
-        'name' : 'Overhead',
+        'name': 'Overhead',
         'total': int(3600 * 3.5),
-        'used' : 0,
+        'used': 0,
         'overflow': 'Leisure'
     },
     {
-        'name' : 'Work',
+        'name': 'Work',
         'total': int(3600 * 6.0),
-        'used' : 0,
+        'used': 0,
     },
     {
-        'name' : 'Leisure',
+        'name': 'Leisure',
         'total': int(3600 * 5.5),
-        'used' : 0,
+        'used': 0,
     }
 ]
 
@@ -771,7 +771,8 @@ class OSDWindow(RoundedWindow):
 
         if self.timeout_id:
             gobject.source_remove(self.timeout_id)
-        self.timeout_id = gobject.timeout_add_seconds(int(timeout), self.cb_timeout)
+        self.timeout_id = gobject.timeout_add_seconds(
+                            int(timeout), self.cb_timeout)
 
 
 #}

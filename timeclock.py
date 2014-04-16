@@ -93,8 +93,7 @@ default_timers = [
 import copy, logging, os, signal, sys, tempfile, time, pickle
 
 from ui.util import get_icon_path, RoundedWindow
-from ui.compact import MainWinCompact
-from ui.legacy import TimeClock
+import ui.compact, ui.legacy
 
 SELF_DIR = os.path.dirname(os.path.realpath(__file__))
 DATA_DIR = os.environ.get('XDG_DATA_HOME',
@@ -116,7 +115,7 @@ NOTIFY_SOUND = os.path.join(
         os.path.dirname(os.path.realpath(__file__)),
         '49213__tombola__Fisher_Price29.wav')
 
-DEFAULT_UI_LIST = ['compact', 'legacy']
+DEFAULT_UI_LIST = ['compact']
 DEFAULT_NOTIFY_LIST = ['audio', 'libnotify', 'osd']
 file_exists = os.path.isfile
 
@@ -128,9 +127,8 @@ try:
 except ImportError:
     pass
 
-import cairo, gtk, gobject, pango
+import gtk, gobject, pango
 import gtk.gdk
-import gtk.glade
 
 import gtkexcepthook
 
@@ -246,17 +244,18 @@ class Mode(gobject.GObject):
         self._overflow = overflow
 
     def __str__(self):
-        remaining = round(self.remaining())
-        if remaining >= 0:
-            ptime = time.strftime('%H:%M:%S', time.gmtime(remaining))
-        else:
-            ptime = time.strftime('-%H:%M:%S', time.gmtime(abs(remaining)))
-
-        return '%s: %s' % (self.name, ptime)
+        return '%s: %s' % (self.name, self.remaining_str())
 
     def remaining(self):
         """Return the remaining time in this mode as an integer"""
         return self.total - self.used
+
+    def remaining_str(self):
+        remaining = round(self.remaining())
+        if remaining >= 0:
+            return time.strftime('%H:%M:%S', time.gmtime(remaining))
+        else:
+            return time.strftime('-%H:%M:%S', time.gmtime(abs(remaining)))
 
     def reset(self):
         """Reset the timer and update listeners."""
@@ -777,10 +776,7 @@ class OSDWindow(RoundedWindow):
 
 #}
 
-KNOWN_UI_MAP = {
-        'compact': MainWinCompact,
-        'legacy': TimeClock
-}
+KNOWN_UI_MAP = {x: getattr(ui, x).MainWin for x in ['compact', 'legacy']}
 
 def main():
     from optparse import OptionParser

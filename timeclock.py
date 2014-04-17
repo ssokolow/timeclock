@@ -91,6 +91,7 @@ default_timers = [
 ]
 
 import logging, os, signal, sys, tempfile, time
+log = logging.getLogger(__name__)
 
 from model import TimerModel
 from ui.util import get_icon_path, RoundedWindow
@@ -571,10 +572,10 @@ def main():
         try:
             KNOWN_NOTIFY_MAP[name](model)
         except ImportError:
-            logging.warn("Could not initialize notifier %s due to unsatisfied "
-                         "dependencies.", name)
+            log.warn("Could not initialize notifier %s due to unsatisfied "
+                     "dependencies.", name)
         else:
-            logging.info("Successfully instantiated notifier: %s", name)
+            log.info("Successfully instantiated notifier: %s", name)
 
     # UI Views
     if not opts.interfaces:
@@ -583,10 +584,10 @@ def main():
         try:
             KNOWN_UI_MAP[name](model)
         except ImportError:
-            logging.warn("Could not initialize UI %s due to unsatisfied "
-                         "dependencies.", name)
+            log.warn("Could not initialize UI %s due to unsatisfied "
+                     "dependencies.", name)
         else:
-            logging.info("Successfully instantiated UI: %s", name)
+            log.info("Successfully instantiated UI: %s", name)
 
     #TODO: Split out the PyNotify parts into a separate view(?) module.
     #TODO: Write up an audio notification view(?) module.

@@ -117,15 +117,15 @@ class MainWinContextMenu(gtk.Menu):
         reset = gtk.MenuItem("_Reset...")
         sep = gtk.SeparatorMenuItem()
         prefs = gtk.MenuItem("_Preferences...")
-        quit = gtk.ImageMenuItem(stock_id="gtk-quit")
+        quit_item = gtk.ImageMenuItem(stock_id="gtk-quit")
 
         self.append(asleep)
         self.append(reset)
         self.append(sep)
         self.append(prefs)
-        self.append(quit)
+        self.append(quit_item)
 
         #TODO: asleep
         reset.connect('activate', mainwin.cb_reset, mainwin.model)
         #TODO: prefs
-        quit.connect('activate', gtk.main_quit)
+        quit_item.connect('activate', gtk.main_quit)

@@ -173,7 +173,7 @@ class SingleInstance:
             try:
                 # file already exists, we try to remove
                 # (in case previous execution was interrupted)
-                if(os.path.exists(self.lockfile)):
+                if os.path.exists(self.lockfile):
                     os.unlink(self.lockfile)
                 self.fd = os.open(self.lockfile,
                         os.O_CREAT | os.O_EXCL | os.O_RDWR)
@@ -278,9 +278,9 @@ class IdleController(gobject.GObject):
 
     def __del__(self):
         if self.watch_id:
-                self._source_remove(self.watch_id)
+            self._source_remove(self.watch_id)
         if self.conn:
-                self.conn.disconnect()
+            self.conn.disconnect()
 
     def cb_updated(self, model):
         now = time.time()
@@ -534,7 +534,7 @@ def main():
                       "so a development copy can be launched without "
                       "interfering with normal use")
 
-    opts, args = parser.parse_args()
+    opts, _ = parser.parse_args()
 
     if opts.develop:
         lockname = __file__ + '.dev'

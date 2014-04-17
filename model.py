@@ -268,7 +268,7 @@ class TimerModel(gobject.GObject):
         # TODO: Find another way to atomically replace the state file.
         # TODO: Decide what to do when self.save_file is a directory
         if os.name == 'nt' and os.path.exists(self.save_file):
-                os.unlink(self.save_file)
+            os.unlink(self.save_file)
 
         # Corruption from saving without atomic replace has been observed
         os.rename(self.save_file + '.tmp', self.save_file)

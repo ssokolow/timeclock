@@ -1,7 +1,9 @@
+from __future__ import absolute_import
+
 import gtk
 
-from common import ModeWidgetMixin, MainWinMixin
-from util import get_icon_path, RoundedWindow
+from .common import ModeWidgetMixin, MainWinMixin
+from .util import get_icon_path, RoundedWindow
 
 class ModeButton(gtk.RadioButton, ModeWidgetMixin):
     """Compact progress-button representing a timer mode."""

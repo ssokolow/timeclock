@@ -1,8 +1,10 @@
 """Stuff common to both the legacy and compact UIs."""
 
+from __future__ import absolute_import
+
 import gtk
 
-from util import get_icon_path
+from .util import get_icon_path
 
 class ModeWidgetMixin(object):
     mode = None      # The mode object from the Timeclock model

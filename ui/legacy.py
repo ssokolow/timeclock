@@ -3,9 +3,11 @@
        of meters like the compact UI.
 """
 
+from __future__ import absolute_import
+
 import gtk
 
-from common import ModeWidgetMixin, MainWinMixin
+from .common import ModeWidgetMixin, MainWinMixin
 
 class FiniteModeWidget(gtk.VBox, ModeWidgetMixin):
     def __init__(self, mode, *args, **kwargs):

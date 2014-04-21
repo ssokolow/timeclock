@@ -1,4 +1,8 @@
+"""Data model and save/load code"""
 from __future__ import absolute_import
+
+__author__ = "Stephan Sokolow (deitarion/SSokolow)"
+__license__ = "GNU GPU 2.0 or later"
 
 import copy, logging, os, time
 import cPickle as pickle
@@ -60,6 +64,7 @@ class Mode(gobject.GObject):
         return self.total - self.used
 
     def remaining_str(self):
+        """Return the remaining time as a pretty-printed string"""
         remaining = round(self.remaining())
         if remaining >= 0:
             return time.strftime('%H:%M:%S', time.gmtime(remaining))
@@ -80,7 +85,8 @@ class Mode(gobject.GObject):
                 'overflow': self.overflow,
         }
 
-    def notify_tick(self):
+    def cb_notify_tick(self):
+        """Callback used to trigger periodic 'timer expired' notifications."""
         self.emit('notify-tick')
 
 class UnlimitedMode(Mode):
@@ -110,6 +116,7 @@ class TimerModel(gobject.GObject):
         self.save_file = save_file
         self.default_timers = defaults or {}
         self.start_mode = start_mode
+        self.timers = []
 
         self.notify = True
         self._load()
@@ -122,13 +129,16 @@ class TimerModel(gobject.GObject):
         self.active = self.start_mode
 
         for mode in self.timers:
-            mode.connect('updated', self.updated)
-            mode.connect('notify-tick', self.notify_tick)
+            mode.connect('updated', self.cb_updated)
+            mode.connect('notify-tick', self.cb_notify_tick)
 
-    def updated(self, mode):
+    # pylint: disable=unused-argument
+    def cb_updated(self, mode):
+        """Callback used to propagate mode update events upward."""
         self.emit('updated')
 
-    def notify_tick(self, mode):
+    def cb_notify_tick(self, mode):
+        """Callback used to propagate notification triggers upwards."""
         self.emit('notify-tick', mode)
 
     def reset(self):
@@ -144,10 +154,8 @@ class TimerModel(gobject.GObject):
                 # Load the data, but leave the internal state unchanged in case
                 # of corruption.
 
-                # Don't rely on CPython's refcounting or Python 2.5's "with"
-                fh = open(self.save_file, 'rb')
-                loaded = pickle.load(fh)
-                fh.close()
+                with open(self.save_file, 'rb') as fobj:
+                    loaded = pickle.load(fobj)
 
                 #TODO: Move all the migration code to a different module.
                 #TODO: Use old versions of Timeclock to generate unit test data
@@ -189,20 +197,21 @@ class TimerModel(gobject.GObject):
                             % (CURRENT_SAVE_VERSION, version))
 
                 if version <= 4:
-                    MODE_NAMES = ('Asleep', 'Overhead', 'Work', 'Leisure')
+                    # Out-of-band data from the save files
+                    mode_names = ('Asleep', 'Overhead', 'Work', 'Leisure')
 
                     timers = []
                     for pos, row in enumerate(zip(total, used)):
                         timers.append({
-                            'name': MODE_NAMES[pos],
+                            'name': mode_names[pos],
                             'total': row[0],
                             'used': row[1],
                         })
 
                 # Sanity checking could go here.
 
-            except Exception, e:
-                log.error("Unable to load save file. Ignoring: %s", e)
+            except Exception, err:
+                log.error("Unable to load save file. Ignoring: %s", err)
                 timers = copy.deepcopy(self.default_timers)
             else:
                 log.info("Save file loaded successfully")
@@ -229,9 +238,11 @@ class TimerModel(gobject.GObject):
 
     #TODO: Reimplement using signalled_property and a signal connect.
     def _get_selected(self):
+        """Getter backend for the C{selected} property"""
         return self._selected
 
     def _set_selected(self, mode):
+        """Setter backend for the C{selected} property"""
         self._selected = mode
         self.active = mode
         #TODO: Figure out what class should bear responsibility for
@@ -259,10 +270,8 @@ class TimerModel(gobject.GObject):
             'window': window_state,
         }
 
-        # Don't rely on CPython's refcounting or Python 2.5's "with"
-        fh = open(self.save_file + '.tmp', "wb")
-        pickle.dump((CURRENT_SAVE_VERSION, data), fh)
-        fh.close()
+        with open(self.save_file + '.tmp', "wb") as fobj:
+            pickle.dump((CURRENT_SAVE_VERSION, data), fobj)
 
         # Windows doesn't let you os.rename to overwrite.
         # TODO: Find another way to atomically replace the state file.

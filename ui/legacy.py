@@ -5,11 +5,15 @@
 
 from __future__ import absolute_import
 
+__author__ = "Stephan Sokolow (deitarion/SSokolow)"
+__license__ = "GNU GPU 2.0 or later"
+
 import gtk
 
 from .common import ModeWidgetMixin, MainWinMixin
 
 class FiniteModeWidget(gtk.VBox, ModeWidgetMixin):
+    """Widget for displaying timers which can run out"""
     def __init__(self, mode, *args, **kwargs):
         super(FiniteModeWidget, self).__init__(*args, **kwargs)
 
@@ -23,6 +27,7 @@ class FiniteModeWidget(gtk.VBox, ModeWidgetMixin):
         self.add(self.button)
 
 class InfiniteModeWidget(gtk.RadioButton, ModeWidgetMixin):
+    """Widget for displaying timers which cannot run out"""
     def __init__(self, mode, *args, **kwargs):
         super(InfiniteModeWidget, self).__init__(*args, **kwargs)
 

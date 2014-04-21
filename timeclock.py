@@ -30,8 +30,6 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
  - Figure out some intuitive, non-distracting way to allow the user to make
    corrections. (eg. you forgot to set the timer to leisure before going AFK)
  - Report PyGTK's uncatchable xkill response on the bug tracker.
- - Explore how progress bars behave when their base colors are changed:
-   (http://hg.atheme.org/audacious/audacious-plugins/diff/a25b618e8f4a/src/gtkui/ui_playlist_widget.c)
  - Profile timeclock. Something this size shouldn't take 0.6% of an Athon 5000+
 
 @todo: Notification TODO:
@@ -49,16 +47,11 @@ See http://ssokolow.github.com/timeclock/ for a screenshot.
  - http://gtk-apps.org/
  - http://pypi.python.org/pypi
 
-@todo: Make use of these references:
- - http://www.pygtk.org/articles/writing-a-custom-widget-using-pygtk/writing-a-custom-widget-using-pygtk.htm
- - http://unpythonic.blogspot.com/2007/03/custom-pygtk-widgets-in-glade3-part-2.html
- - https://live.gnome.org/Vala/CustomWidgetSamples
-
 @newfield appname: Application Name
 """
 
 __appname__ = "The Procrastinator's Timeclock"
-__authors__  = [
+__authors__ = [
     "Stephan Sokolow (deitarion/SSokolow)",
     "Charlie Nolan (FunnyMan3595)"]
 __author__ = ', '.join(__authors__)
@@ -93,8 +86,18 @@ default_timers = [
 import logging, os, signal, sys, tempfile, time
 log = logging.getLogger(__name__)
 
+#from gi import pygtkcompat
+#pygtkcompat.enable()
+#pygtkcompat.enable_gtk(version='3.0')
+
+try:
+    import pygtk
+    pygtk.require("2.0")
+except ImportError:
+    pass
+
 from model import TimerModel
-from ui.util import get_icon_path, RoundedWindow
+from ui.util import get_icon_path, OSDWindow
 import ui.compact, ui.legacy
 
 SELF_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -122,14 +125,8 @@ DEFAULT_NOTIFY_LIST = ['audio', 'libnotify', 'osd']
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
-try:
-    import pygtk
-    pygtk.require("2.0")
-except ImportError:
-    pass
-
-import gtk, gobject, pango
-import gtk.gdk
+import gtk, gobject
+import gtk.gdk  # pylint: disable=import-error
 
 import gtkexcepthook
 
@@ -146,7 +143,7 @@ class SingleInstance:
 
         :note: ``lockname`` assumes it is being given a valid filename.
         """
-        import sys as _sys    # Alias to please pyflakes
+        import sys as _sys             # Alias to please pyflakes
         self.platform = _sys.platform  # Avoid an AttributeError in __del__
 
         if lockfile:
@@ -177,17 +174,17 @@ class SingleInstance:
                     os.unlink(self.lockfile)
                 self.fd = os.open(self.lockfile,
                         os.O_CREAT | os.O_EXCL | os.O_RDWR)
-            except OSError, e:
-                if e.errno == 13:
+            except OSError, err:
+                if err.errno == 13:
                     print "Another instance is already running, quitting."
                     _sys.exit(-1)
-                print e.errno
+                print err.errno
                 raise
         else:  # non Windows
             import fcntl
-            self.fp = open(self.lockfile, 'w')
+            self.fobj = open(self.lockfile, 'w')
             try:
-                fcntl.lockf(self.fp, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                fcntl.lockf(self.fobj, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except IOError:
                 print "Another instance is already running, quitting."
                 _sys.exit(-1)
@@ -392,14 +389,15 @@ class AudioNotifier(gobject.GObject):
         self.bin = gst.element_factory_make("playbin")
         self.bin.set_property("uri", self.uri)
 
-        model.connect('notify-tick', self.notify_exhaustion)
+        model.connect('notify-tick', self.cb_notify_exhaustion)
 
         #TODO: Fall back to using winsound or wave+ossaudiodev or maybe pygame
         #TODO: Design a generic wrapper which also tries things like these:
         # - http://stackoverflow.com/q/276266/435253
         # - http://stackoverflow.com/questions/307305/play-a-sound-with-python
 
-    def notify_exhaustion(self, model, mode):
+    # pylint: disable=unused-argument
+    def cb_notify_exhaustion(self, model, mode):
         #TODO: Do I really need to set STATE_NULL first?
         self.bin.set_state(self.gst.STATE_NULL)
         self.bin.set_state(self.gst.STATE_PLAYING)
@@ -415,7 +413,7 @@ class OSDNaggerNotifier(gobject.GObject):
         for display in display_manager.list_displays():
             self.cb_display_opened(display_manager, display)
 
-        model.connect('notify-tick', self.notify_exhaustion)
+        model.connect('notify-tick', self.cb_notify_exhaustion)
         model.connect('mode-changed', self.cb_mode_changed)
         display_manager.connect("display-opened", self.cb_display_opened)
 
@@ -452,7 +450,8 @@ class OSDNaggerNotifier(gobject.GObject):
                 # (Might it be that the window hasn't been sized yet?)
                 self.windows[key] = window
 
-    def notify_exhaustion(self, model, mode):
+    # pylint: disable=unused-argument
+    def cb_notify_exhaustion(self, model, mode):
         """Display an OSD on each monitor"""
         for win in self.windows.values():
             #TODO: The message template should be separated.
@@ -468,49 +467,10 @@ KNOWN_NOTIFY_MAP = {
         'osd': OSDNaggerNotifier
 }
 
-#{ UI Components
-
-class OSDWindow(RoundedWindow):
-    """Simple OSD overlay for notifications"""
-
-    font = pango.FontDescription("Sans Serif 22")
-
-    def __init__(self, corner_radius=25, *args, **kwargs):
-        super(OSDWindow, self).__init__(type=gtk.WINDOW_POPUP,
-                corner_radius=corner_radius, *args, **kwargs)
-
-        self.timeout_id = None
-
-        self.set_border_width(10)
-        self.label = gtk.Label()
-        self.label.modify_font(self.font)
-        self.add(self.label)
-
-    def cb_timeout(self):
-        self.timeout_id = None
-        self.hide()
-        return False
-
-    def hide(self):
-        if self.timeout_id:
-            gobject.source_remove(self.timeout_id)
-        super(OSDWindow, self).hide()
-
-    def message(self, text, timeout):
-        self.label.set_text(text)
-        self.show_all()
-
-        if self.timeout_id:
-            gobject.source_remove(self.timeout_id)
-        self.timeout_id = gobject.timeout_add_seconds(
-                            int(timeout), self.cb_timeout)
-
-
-#}
-
 KNOWN_UI_MAP = {x: getattr(ui, x).MainWin for x in ['compact', 'legacy']}
 
 def main():
+    """Main entry point for the application"""
     from optparse import OptionParser
     parser = OptionParser(version="%%prog v%s" % __version__)
     parser.add_option('-m', '--initial-mode', action="store", dest="mode",

@@ -67,9 +67,12 @@ def analyse(exctyp, value, tb):
         args, varargs, varkw, lcls = inspect.getargvalues(frame)
 
         def readline(lno=[lineno], *args):
-            if args: print args
-            try: return linecache.getline(fname, lno[0])
-            finally: lno[0] += 1
+            if args:
+                print args
+            try:
+                return linecache.getline(fname, lno[0])
+            finally:
+                lno[0] += 1
         all, prev, name, scope = {}, None, '', None
         for ttype, tstr, stup, etup, line in tokenize.generate_tokens(readline):
             if ttype == tokenize.NAME and tstr not in keyword.kwlist:
@@ -143,7 +146,7 @@ def _info(exctyp, value, tb):
     while True:
         resp = dialog.run()
         if resp == 3:
-            if trace == None:
+            if trace is None:
                 trace = analyse(exctyp, value, tb)
 
             # TODO: prettyprint, deal with problems in sending feedback, &tc
@@ -161,7 +164,7 @@ def _info(exctyp, value, tb):
             break
 
         elif resp == 2:
-            if trace == None:
+            if trace is None:
                 trace = analyse(exctyp, value, tb)
 
             # Show details...
@@ -170,11 +173,13 @@ def _info(exctyp, value, tb):
               (gtk.STOCK_CLOSE, gtk.RESPONSE_CLOSE, ))
             details.set_property("has-separator", False)
 
-            textview = gtk.TextView(); textview.show()
+            textview = gtk.TextView()
+            textview.show()
             textview.set_editable(False)
             textview.modify_font(pango.FontDescription("Monospace"))
 
-            sw = gtk.ScrolledWindow(); sw.show()
+            sw = gtk.ScrolledWindow()
+            sw.show()
             sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
             sw.add(textview)
             details.vbox.add(sw)

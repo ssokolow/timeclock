@@ -2,17 +2,21 @@
 
 from __future__ import absolute_import
 
+__author__ = "Stephan Sokolow (deitarion/SSokolow)"
+__license__ = "GNU GPU 2.0 or later"
+
 import gtk
 
 from .util import get_icon_path
 
 class ModeWidgetMixin(object):
+    """Common boilerplate for implementing timer display widgets"""
     mode = None      # The mode object from the Timeclock model
     button = None    # The gtk.RadioButton to be updated
     progress = None  # The gtk.ProgressBar if applicable
-    progress_label = lambda _, mode: mode.remaining_str()
 
     def _init_children(self):
+        """Common __init__ code which needs flexibility in when it's called"""
         if self.progress:
             self.progress.set_fraction(1.0)
 
@@ -21,19 +25,28 @@ class ModeWidgetMixin(object):
         self.mode.connect('updated', self.cb_update_label)
 
     def cb_mode_changed(self, model, mode):
+        """Callback for applying external state updates to toggle buttons"""
         if mode == self.mode and not self.button.get_active():
             self.button.set_active(True)
 
     def cb_update_label(self, mode):
+        """Callback for updating the progress bar state"""
         if self.progress:
             self.progress.set_text(self.progress_label(mode))
             self.progress.set_fraction(
                     max(float(mode.remaining()) / mode.total, 0))
 
+    # pylint: disable=no-self-use
+    def progress_label(self, mode):
+        """Overridable formatter for progress bar text"""
+        return mode.remaining_str()
+
 class MainWinMixin(object):
+    """Common boilerplate for implementing the main window"""
     model = None    # The top-level Timeclock model object
 
     def _init_after(self):
+        """Common code which needs to be called at the B{end} of __init___"""
         self.set_icon_from_file(get_icon_path(64))
 
         # Because window-state-event is broken on many WMs, default to sticky,
@@ -49,16 +62,17 @@ class MainWinMixin(object):
 
         self.cb_update(self.model)
 
-    #TODO: Normalize callback naming
     def cb_btn_toggled(self, button, mode_widget):
         """Callback for clicking the timer-selection radio buttons"""
         if button.get_active() and not self.model.selected == mode_widget.mode:
             self.model.selected = mode_widget.mode
 
     def cb_mode_changed(self, model, mode):
+        """Callback for setting external state on non-button mode indicators"""
         self.cb_update(model)
 
     def cb_reset(self, widget, model):
+        """Handler for user requests to reset the timeclock countdowns"""
         confirm = gtk.MessageDialog(type=gtk.MESSAGE_WARNING,
                 buttons=gtk.BUTTONS_OK_CANCEL,
                 message_format="Reset all timers?\n"
@@ -73,4 +87,5 @@ class MainWinMixin(object):
         confirm.destroy()
 
     def cb_update(self, model):
+        """Callback for handling general status updates"""
         self.set_title(str(model.selected))

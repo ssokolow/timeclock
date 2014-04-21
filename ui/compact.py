@@ -1,4 +1,9 @@
+"""Compact, toolbar-like UI"""
+
 from __future__ import absolute_import
+
+__author__ = "Stephan Sokolow (deitarion/SSokolow)"
+__license__ = "GNU GPU 2.0 or later"
 
 import gtk
 
@@ -37,7 +42,7 @@ class MainWin(RoundedWindow, MainWinMixin):
         for mode in model.timers:
             btn = ModeButton(mode)
             btn.connect('toggled', self.cb_btn_toggled, btn)
-            btn.connect('button-press-event', self.showMenu)
+            btn.connect('button-press-event', self.cb_show_menu)
             if mode.show:
                 self.btnbox.add(btn)
             else:
@@ -65,24 +70,26 @@ class MainWin(RoundedWindow, MainWinMixin):
         self.set_decorated(False)
         #TODO: See if I can achieve something suitable using a window type too.
 
-        self.evbox.connect('button-release-event', self.showMenu)
+        self.evbox.connect('button-release-event', self.cb_show_menu)
         # TODO: Make this work so the Menu key works.
-        #self.evbox.connect('popup-menu', self.showMenu)
-        handle_evbox.connect('button-press-event', self.handle_pressed)
+        #self.evbox.connect('popup-menu', self.cb_show_menu)
+        handle_evbox.connect('button-press-event', self.cb_handle_pressed)
 
         self._init_after()
         self.menu.show_all()  # TODO: Is this line necessary?
         self.show_all()
 
         # Drag handle cursor must be set after show_all()
+        # pylint: disable=no-member
         handle_evbox.window.set_cursor(gtk.gdk.Cursor(gtk.gdk.FLEUR))
 
         # Set the icon after we know how much vert space the GTK theme gives us
         drag_handle.set_from_file(get_icon_path(
             drag_handle.get_allocation()[3]))
 
-    def handle_pressed(self, widget, event):
-        """If possible, let the WM do window dragging
+    # pylint: disable=unused-argument
+    def cb_handle_pressed(self, widget, event):
+        """Callback to power the drag handle by handing off to the WM.
         Sources:
          - http://www.gtkforums.com/viewtopic.php?t=1822
          - http://www.pygtk.org/docs/pygtk/class-gtkwindow.html
@@ -94,7 +101,8 @@ class MainWin(RoundedWindow, MainWinMixin):
                 int(event.x_root), int(event.y_root),
                 event.time)
 
-    def showMenu(self, widget, event=None, data=None):
+    def cb_show_menu(self, widget, event=None, data=None):
+        """Callback to trigger the context menu on right-click only"""
         if event:
             evtBtn, evtTime = event.button, event.get_time()
 

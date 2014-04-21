@@ -1,0 +1,8 @@
+@todo: Planned improvements:
+ - Explore how progress bars behave when their base colors are changed:
+   (http://hg.atheme.org/audacious/audacious-plugins/diff/a25b618e8f4a/src/gtkui/ui_playlist_widget.c)
+
+@todo: Make use of these references:
+ - http://www.pygtk.org/articles/writing-a-custom-widget-using-pygtk/writing-a-custom-widget-using-pygtk.htm
+ - http://unpythonic.blogspot.com/2007/03/custom-pygtk-widgets-in-glade3-part-2.html
+ - https://live.gnome.org/Vala/CustomWidgetSamples

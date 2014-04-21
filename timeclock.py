@@ -96,10 +96,15 @@ try:
 except ImportError:
     pass
 
-from model import TimerModel
-from notifications.osd_internal import OSDNaggerNotifier
-from ui.util import get_icon_path
-import ui.compact, ui.legacy
+from timeclock.model import TimerModel
+
+# pylint: disable=no-name-in-module
+from timeclock.notifications.osd_internal import OSDNaggerNotifier
+from timeclock.ui.util import get_icon_path
+
+# TODO: Find a better way to allow generalizing the UI init code
+import timeclock.ui.legacy
+import timeclock.ui.compact
 
 SELF_DIR = os.path.dirname(os.path.realpath(__file__))
 DATA_DIR = os.environ.get('XDG_DATA_HOME',
@@ -129,8 +134,8 @@ logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 import gtk, gobject
 import gtk.gdk  # pylint: disable=import-error
 
-from util import gtkexcepthook
-from util.single_instance import SingleInstance
+from timeclock.util import gtkexcepthook
+from timeclock.util.single_instance import SingleInstance
 
 #{ Controller Modules
 
@@ -346,7 +351,9 @@ KNOWN_NOTIFY_MAP = {
         'osd': OSDNaggerNotifier
 }
 
-KNOWN_UI_MAP = {x: getattr(ui, x).MainWin for x in ['compact', 'legacy']}
+# pylint: disable=no-member
+KNOWN_UI_MAP = {x: getattr(timeclock.ui, x).MainWin
+                for x in ['compact', 'legacy']}
 
 def main():
     """Main entry point for the application"""

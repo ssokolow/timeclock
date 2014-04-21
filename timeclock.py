@@ -96,7 +96,7 @@ try:
 except ImportError:
     pass
 
-from timeclock.model import TimerModel
+from timeclock.model import TimerModel  # pylint: disable=no-name-in-module
 
 # pylint: disable=no-name-in-module
 from timeclock.notifications.audio import AudioNotifier
@@ -181,6 +181,8 @@ class TimerController(gobject.GObject):
         return True
 
     def cb_mode_changed(self, model, mode):
+        """Callback which ensures that an expiry notification will appear
+           immediately if you change to an empty timer."""
         self.last_notify = 0
 
 class IdleController(gobject.GObject):

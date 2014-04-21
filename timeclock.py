@@ -83,8 +83,9 @@ default_timers = [
     }
 ]
 
-import logging, os, signal, sys, time
+import logging, os, signal, sys
 log = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
 #from gi import pygtkcompat
 #pygtkcompat.enable()
@@ -96,9 +97,22 @@ try:
 except ImportError:
     pass
 
-from timeclock.model import TimerModel  # pylint: disable=no-name-in-module
+
+DEFAULT_UI_LIST = ['compact']
+DEFAULT_NOTIFY_LIST = ['audio', 'libnotify', 'osd']
+
+import gtk
+import gtk.gdk  # pylint: disable=import-error
 
 # pylint: disable=no-name-in-module
+from timeclock.util import gtkexcepthook
+from timeclock.util.single_instance import SingleInstance
+
+from timeclock.model import TimerModel  # pylint: disable=no-name-in-module
+
+from timeclock.controllers.idle import IdleController
+from timeclock.controllers.timer import TimerController
+
 from timeclock.notifications.audio import AudioNotifier
 from timeclock.notifications.osd_internal import OSDNaggerNotifier
 from timeclock.notifications.libnotify import LibNotifyNotifier
@@ -119,140 +133,6 @@ if not os.path.isdir(DATA_DIR):
         raise SystemExit("Aborting: %s exists but is not a directory!"
                          % DATA_DIR)
 
-SAVE_INTERVAL = 60 * 5  # 5 Minutes
-SLEEP_RESET_INTERVAL = 3600 * 6  # 6 hours
-NOTIFY_INTERVAL = 60 * 15  # 15 Minutes
-
-DEFAULT_UI_LIST = ['compact']
-DEFAULT_NOTIFY_LIST = ['audio', 'libnotify', 'osd']
-
-logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
-
-import gtk, gobject
-import gtk.gdk  # pylint: disable=import-error
-
-from timeclock.util import gtkexcepthook
-from timeclock.util.single_instance import SingleInstance
-
-#{ Controller Modules
-
-class TimerController(gobject.GObject):
-    """The default timer behaviour for the timeclock."""
-    def __init__(self, model):
-        super(TimerController, self).__init__()
-
-        self.model = model
-        self.last_tick = time.time()
-        self.last_notify = 0
-
-        model.connect('mode-changed', self.cb_mode_changed)
-        gobject.timeout_add(1000, self.tick)
-
-    def tick(self):
-        """Callback for updating progress bars."""
-        now = time.time()
-        selected = self.model.selected
-        active = self.model.active
-
-        delta = now - self.last_tick
-        notify_delta = now - self.last_notify
-
-        selected.used += delta
-        if selected != active:
-            active.used += delta
-
-        #TODO: Decide what to do if both selected and active are expired.
-        if selected.remaining() <= 0 and notify_delta > 900:
-            selected.notify_tick()
-            self.last_notify = now
-
-        if active.remaining() < 0:
-            overflow_to = ([x for x in self.model.timers
-                if x.name == active.overflow] or [None])[0]
-            if overflow_to:
-                self.model.active = overflow_to
-                #XXX: Is it worth fixing the pseudo-rounding error tick, delta,
-                # and mode-switching introduce?
-
-        if now >= (self.model.last_save + SAVE_INTERVAL):
-            self.model.save()
-
-        self.last_tick = now
-        return True
-
-    def cb_mode_changed(self, model, mode):
-        """Callback which ensures that an expiry notification will appear
-           immediately if you change to an empty timer."""
-        self.last_notify = 0
-
-class IdleController(gobject.GObject):
-    """A controller to automatically reset the timer if you fall asleep."""
-    watch_id, conn = None, None
-
-    def __init__(self, model):
-        super(IdleController, self).__init__()
-        self._source_remove = gobject.source_remove
-        #See SingleInstance for rationale
-
-        self.model = model
-        self.last_tick = 0
-
-        try:
-            import xcb, xcb.xproto
-            import xcb.screensaver
-        except ImportError:
-            pass
-        else:
-            self.conn = xcb.connect()
-            self.setup = self.conn.get_setup()
-            self.ss_conn = self.conn(xcb.screensaver.key)
-
-            #TODO: Also handle gobject.IO_HUP in case of disconnect.
-            self.watch_id = gobject.io_add_watch(
-                    self.conn.get_file_descriptor(),
-                    gobject.IO_IN | gobject.IO_PRI,
-                    self.cb_xcb_response)
-
-            model.connect('updated', self.cb_updated)
-
-    def __del__(self):
-        if self.watch_id:
-            self._source_remove(self.watch_id)
-        if self.conn:
-            self.conn.disconnect()
-
-    def cb_updated(self, model):
-        now = time.time()
-        if self.last_tick + 60 < now:
-            self.last_tick = now
-
-            #TODO: Can I do this with cb_xcb_response for less blocking?
-            idle_query = self.ss_conn.QueryInfo(self.setup.roots[0].root)
-            idle_secs = idle_query.reply().ms_since_user_input / 1000.0
-
-            #FIXME: This will fire once a second once the limit is passed
-            if idle_secs >= SLEEP_RESET_INTERVAL:
-                model.reset()
-
-    def cb_xcb_response(self, source, condition):
-        """Accept and discard X events to prevent any risk of a frozen
-        connection because some buffer somewhere is full.
-
-        :todo: Decide how to handle conn.has_error() != 0 (disconnected)
-        :note: It's safe to call conn.disconnect() multiple times.
-        """
-        try:
-            # (Don't use "while True" in case the xcb "NULL when no more"
-            #  behaviour occasionally happens)
-            while self.conn.poll_for_event():
-                pass
-        except IOError:
-            # In testing, IOError is raised when no events are available.
-            pass
-
-        return True  # Keep the callback registered.
-
-#{ Notification Modules
 
 KNOWN_NOTIFY_MAP = {
         'audio': AudioNotifier,

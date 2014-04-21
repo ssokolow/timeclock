@@ -23,7 +23,6 @@ def get_icon_path(size):
     return os.path.join(SELF_DIR, '..', "icons",
             "timeclock_%dx%d.png" % (size, size))
 
-# pylint: disable=too-many-public-methods
 class RoundedWindow(gtk.Window):
     """Undecorated gtk.Window with rounded corners."""
     def __init__(self, corner_radius=10, *args, **kwargs):

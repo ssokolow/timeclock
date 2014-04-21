@@ -1,7 +1,10 @@
 """Data model and save/load code"""
 from __future__ import absolute_import
 
-__author__ = "Stephan Sokolow (deitarion/SSokolow)"
+__authors__ = [
+    "Stephan Sokolow (deitarion/SSokolow)",
+    "Charlie Nolan (FunnyMan3595)"]
+__author__ = ', '.join(__authors__)
 __license__ = "GNU GPU 2.0 or later"
 
 import copy, logging, os, time

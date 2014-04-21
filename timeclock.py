@@ -99,6 +99,7 @@ except ImportError:
 from timeclock.model import TimerModel
 
 # pylint: disable=no-name-in-module
+from timeclock.notifications.audio import AudioNotifier
 from timeclock.notifications.osd_internal import OSDNaggerNotifier
 from timeclock.notifications.libnotify import LibNotifyNotifier
 
@@ -121,10 +122,6 @@ if not os.path.isdir(DATA_DIR):
 SAVE_INTERVAL = 60 * 5  # 5 Minutes
 SLEEP_RESET_INTERVAL = 3600 * 6  # 6 hours
 NOTIFY_INTERVAL = 60 * 15  # 15 Minutes
-
-NOTIFY_SOUND = os.path.join(
-        os.path.dirname(os.path.realpath(__file__)),
-        '49213__tombola__Fisher_Price29.wav')
 
 DEFAULT_UI_LIST = ['compact']
 DEFAULT_NOTIFY_LIST = ['audio', 'libnotify', 'osd']
@@ -254,44 +251,6 @@ class IdleController(gobject.GObject):
         return True  # Keep the callback registered.
 
 #{ Notification Modules
-
-class AudioNotifier(gobject.GObject):
-    """An audio timer expiry notification based on a portability layer."""
-    def __init__(self, model):
-        # Keep "import gst" from grabbing --help, showing its help, and exiting
-        _argv, sys.argv = sys.argv, []
-
-        try:
-            import gst
-            import urllib
-        finally:
-            # Restore sys.argv so I can parse it cleanly.
-            sys.argv = _argv
-
-        self.gst = gst
-        super(AudioNotifier, self).__init__()
-
-        self.last_notified = 0
-        self.uri = NOTIFY_SOUND
-
-        if os.path.exists(self.uri):
-            self.uri = 'file://' + urllib.pathname2url(
-                    os.path.abspath(self.uri))
-        self.bin = gst.element_factory_make("playbin")
-        self.bin.set_property("uri", self.uri)
-
-        model.connect('notify-tick', self.cb_notify_exhaustion)
-
-        #TODO: Fall back to using winsound or wave+ossaudiodev or maybe pygame
-        #TODO: Design a generic wrapper which also tries things like these:
-        # - http://stackoverflow.com/q/276266/435253
-        # - http://stackoverflow.com/questions/307305/play-a-sound-with-python
-
-    # pylint: disable=unused-argument
-    def cb_notify_exhaustion(self, model, mode):
-        #TODO: Do I really need to set STATE_NULL first?
-        self.bin.set_state(self.gst.STATE_NULL)
-        self.bin.set_state(self.gst.STATE_PLAYING)
 
 KNOWN_NOTIFY_MAP = {
         'audio': AudioNotifier,

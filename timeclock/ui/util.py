@@ -3,6 +3,7 @@
 
 import os
 import cairo, gobject, gtk, pango
+import gtk.gdk  # pylint: disable=import-error
 
 __author__ = "Stephan Sokolow (deitarion/SSokolow)"
 __license__ = "GNU GPU 2.0 or later"
@@ -29,7 +30,7 @@ class RoundedWindow(gtk.Window):
         gtk.Window.__init__(self, *args, **kwargs)
 
         self.corner_radius = corner_radius
-        self.connect('size-allocate', self._on_size_allocate)
+        self.connect('size-allocate', self.__cb_size_allocate)
         self.set_decorated(False)
 
     # pylint: disable=invalid-name,too-many-arguments,no-self-use
@@ -56,7 +57,7 @@ class RoundedWindow(gtk.Window):
         cr.line_to(x, y + r)                           # Line to H
         cr.curve_to(x, y, x, y, x + r, y)              # Curve to A
 
-    def _on_size_allocate(self, win, allocation):
+    def __cb_size_allocate(self, win, allocation):
         """Callback to round the window whenever its size is set."""
         w, h = allocation.width, allocation.height
         bitmap = gtk.gdk.Pixmap(None, w, h, 1)
@@ -81,13 +82,20 @@ class OSDWindow(RoundedWindow):
 
     font = pango.FontDescription("Sans Serif 22")
 
-    def __init__(self, corner_radius=25, font=None, *args, **kwargs):
+    def __init__(self, corner_radius=25, monitor=None, font=None,
+                 *args, **kwargs):
         super(OSDWindow, self).__init__(type=gtk.WINDOW_POPUP,
                 corner_radius=corner_radius, *args, **kwargs)
 
         self.font = font or self.font
         self.timeout_id = None
         self._add_widgets()
+        self.monitor_geom = monitor or None
+
+        if self.monitor_geom:
+            self.connect_after("size-allocate", self.__cb_size_allocate)
+        else:
+            self.set_position(gtk.WIN_POS_CENTER_ALWAYS)
 
     def _add_widgets(self):
         """Override to change a subclass's contents"""
@@ -101,6 +109,20 @@ class OSDWindow(RoundedWindow):
     def _set_message(self, msg):
         """Override when overriding _add_widgets"""
         self.label.set_text(msg)
+
+    def __cb_size_allocate(self, widget, allocation):
+        """Callback to re-center the window as its contents change"""
+        if widget.monitor_geom and widget.window:
+            geom = widget.monitor_geom
+
+            # We need this to prevent a race which breaks move()
+            while gtk.events_pending():
+                gtk.main_iteration_do(False)
+
+            widget.window.move(
+                geom.x + (geom.width / 2) - (allocation.width / 2),
+                geom.y + (geom.height / 2) - (allocation.height / 2))
+        return False
 
     def cb_timeout(self):
         """Callback for when the OSD times out"""
@@ -170,12 +192,8 @@ class MultiMonitorOSD(gobject.GObject):
 
             key = (display_name, screen_num, tuple(geom))
             if key not in self.windows:
-                window = OSDWindow(font=self.font)
+                window = OSDWindow(font=self.font, monitor=geom)
                 window.set_screen(screen)
-                window.set_gravity(gtk.gdk.GRAVITY_CENTER)
-                window.move(geom.x + geom.width / 2, geom.y + geom.height / 2)
-                #FIXME: Either fix the center gravity or calculate it manually
-                # (Might it be that the window hasn't been sized yet?)
                 self.windows[key] = window
 
     def hide(self):

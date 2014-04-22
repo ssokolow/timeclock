@@ -22,8 +22,8 @@ class BedtimeEnforcer(gobject.GObject):
         super(BedtimeEnforcer, self).__init__()
         self.model = model
         self.last_tick = 0
-        self.osd = MultiMonitorOSD(model,
-                        font=pango.FontDescription("Sans Serif 48"))
+        self.osd = MultiMonitorOSD(
+            font=pango.FontDescription("Sans Serif 64"))
         model.connect('updated', self.cb_updated)
 
     def cb_updated(self, model):

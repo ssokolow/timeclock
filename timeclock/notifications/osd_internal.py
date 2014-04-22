@@ -14,7 +14,7 @@ class OSDNaggerNotifier(gobject.GObject):
     def __init__(self, model):
         super(OSDNaggerNotifier, self).__init__()
 
-        self.osd = MultiMonitorOSD(model)
+        self.osd = MultiMonitorOSD()
 
         model.connect('notify-tick', self.cb_notify_exhaustion)
         model.connect('mode-changed', self.cb_mode_changed)

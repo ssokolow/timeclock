@@ -155,7 +155,8 @@ class MultiMonitorOSD(gobject.GObject):
 
     @todo: Probably time to move OSD handling into its own module.
     """
-    def __init__(self, model, font=None):
+
+    def __init__(self, font=None):
         super(MultiMonitorOSD, self).__init__()
 
         self.font = font or OSDWindow.font
@@ -165,7 +166,6 @@ class MultiMonitorOSD(gobject.GObject):
         for display in display_manager.list_displays():
             self.cb_display_opened(display_manager, display)
 
-        #model.connect('tick', self.cb_cycle_osd)
         display_manager.connect("display-opened", self.cb_display_opened)
 
     def cb_display_closed(self, display, is_error):

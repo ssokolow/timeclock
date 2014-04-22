@@ -112,6 +112,7 @@ from timeclock.model import TimerModel  # pylint: disable=no-name-in-module
 
 from timeclock.controllers.idle import IdleController
 from timeclock.controllers.timer import TimerController
+from timeclock.controllers.bedtime_enforcer import BedtimeEnforcer
 
 from timeclock.notifications.audio import AudioNotifier
 from timeclock.notifications.osd_internal import OSDNaggerNotifier
@@ -197,8 +198,10 @@ def main():
         opts.mode = default
 
     # Controllers
+    # TODO: More general way to start these things
     TimerController(model)
     IdleController(model)
+    BedtimeEnforcer(model)
 
     # Notification Views
     if not opts.notifiers:

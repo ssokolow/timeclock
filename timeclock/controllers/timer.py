@@ -37,7 +37,7 @@ class TimerController(gobject.GObject):
 
         #TODO: Decide what to do if both selected and active are expired.
         if selected.remaining() <= 0 and notify_delta > NOTIFY_INTERVAL:
-            selected.notify_tick()
+            selected.cb_notify_tick()
             self.last_notify = now
 
         if active.remaining() < 0:

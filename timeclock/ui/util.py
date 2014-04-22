@@ -81,10 +81,11 @@ class OSDWindow(RoundedWindow):
 
     font = pango.FontDescription("Sans Serif 22")
 
-    def __init__(self, corner_radius=25, *args, **kwargs):
+    def __init__(self, corner_radius=25, font=None, *args, **kwargs):
         super(OSDWindow, self).__init__(type=gtk.WINDOW_POPUP,
                 corner_radius=corner_radius, *args, **kwargs)
 
+        self.font = font or self.font
         self.timeout_id = None
         self._add_widgets()
 
@@ -126,3 +127,63 @@ class OSDWindow(RoundedWindow):
         if timeout > 0:
             self.timeout_id = gobject.timeout_add_seconds(
                                 int(timeout), self.cb_timeout)
+
+class MultiMonitorOSD(gobject.GObject):
+    """An OSD manager which handles multiple monitors.
+
+    @todo: Probably time to move OSD handling into its own module.
+    """
+    def __init__(self, model, font=None):
+        super(MultiMonitorOSD, self).__init__()
+
+        self.font = font or OSDWindow.font
+        self.windows = {}
+
+        display_manager = gtk.gdk.display_manager_get()
+        for display in display_manager.list_displays():
+            self.cb_display_opened(display_manager, display)
+
+        #model.connect('tick', self.cb_cycle_osd)
+        display_manager.connect("display-opened", self.cb_display_opened)
+
+    def cb_display_closed(self, display, is_error):
+        """@todo: Handler to clean up after a display is closed."""
+        pass  # TODO: Dereference and destroy the corresponding OSDWindows.
+
+    def cb_display_opened(self, manager, display):
+        """Handler to start listening when a new display is opened."""
+        for screen_num in range(0, display.get_n_screens()):
+            screen = display.get_screen(screen_num)
+
+            self.cb_monitors_changed(screen)
+            screen.connect("monitors-changed", self.cb_monitors_changed)
+
+        display.connect('closed', self.cb_display_closed)
+
+    def cb_monitors_changed(self, screen):
+        """Handler to adapt to changing desktop geometry"""
+        #FIXME: This must handle changes and deletes in addition to adds.
+        for monitor_num in range(0, screen.get_n_monitors()):
+            display_name = screen.get_display().get_name()
+            screen_num = screen.get_number()
+            geom = screen.get_monitor_geometry(monitor_num)
+
+            key = (display_name, screen_num, tuple(geom))
+            if key not in self.windows:
+                window = OSDWindow(font=self.font)
+                window.set_screen(screen)
+                window.set_gravity(gtk.gdk.GRAVITY_CENTER)
+                window.move(geom.x + geom.width / 2, geom.y + geom.height / 2)
+                #FIXME: Either fix the center gravity or calculate it manually
+                # (Might it be that the window hasn't been sized yet?)
+                self.windows[key] = window
+
+    def hide(self):
+        """Hide all OSD windows."""
+        for win in self.windows.values():
+            win.hide()
+
+    def message(self, msg, timeout):
+        """Display an OSD on each monitor"""
+        for win in self.windows.values():
+            win.message(msg, timeout)

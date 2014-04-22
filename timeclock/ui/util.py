@@ -1,7 +1,7 @@
 """UI-related utility functions which may also be used by controllers."""
 
 
-import os
+import os, time
 import cairo, gobject, gtk, pango
 import gtk.gdk  # pylint: disable=import-error
 
@@ -156,17 +156,42 @@ class MultiMonitorOSD(gobject.GObject):
     @todo: Probably time to move OSD handling into its own module.
     """
 
-    def __init__(self, font=None):
+    cycle_id = None
+    timeout_target = 0
+
+    def __init__(self, font=None, cycle=False):
         super(MultiMonitorOSD, self).__init__()
 
         self.font = font or OSDWindow.font
         self.windows = {}
+        self.cycle = cycle
 
         display_manager = gtk.gdk.display_manager_get()
         for display in display_manager.list_displays():
             self.cb_display_opened(display_manager, display)
 
         display_manager.connect("display-opened", self.cb_display_opened)
+
+
+    def cb_cycle_osd(self):
+        """Callback to animate cycle=True OSDs so they can't be ignored."""
+        now = time.time()
+
+        # Support manual expiry
+        if self.timeout_target is None:
+            expired = False
+        else:
+            expired = now > self.timeout_target
+
+        for pos, win in enumerate(self.windows.values()):
+            if pos % 2 == int(now) % 2 and not expired:
+                win.show()
+            else:
+                win.hide()
+
+        if expired:
+            self.cycle_id = None
+        return not expired
 
     def cb_display_closed(self, display, is_error):
         """@todo: Handler to clean up after a display is closed."""
@@ -198,10 +223,21 @@ class MultiMonitorOSD(gobject.GObject):
 
     def hide(self):
         """Hide all OSD windows."""
+        self.timeout_target = 0
         for win in self.windows.values():
             win.hide()
 
     def message(self, msg, timeout):
         """Display an OSD on each monitor"""
+        if timeout > 0:
+            self.timeout_target = time.time() + timeout
+        else:
+            self.timeout_target = None
+
         for win in self.windows.values():
             win.message(msg, timeout)
+
+        if self.cycle_id:
+            gobject.source_remove(self.cycle_id)
+        if self.cycle:
+            self.cycle_id = gobject.timeout_add(1000, self.cb_cycle_osd)

@@ -22,7 +22,7 @@ class BedtimeEnforcer(gobject.GObject):
         super(BedtimeEnforcer, self).__init__()
         self.model = model
         self.last_tick = 0
-        self.osd = MultiMonitorOSD(
+        self.osd = MultiMonitorOSD(cycle=True,
             font=pango.FontDescription("Sans Serif 64"))
         model.connect('updated', self.cb_updated)
 
@@ -36,8 +36,7 @@ class BedtimeEnforcer(gobject.GObject):
             self.last_tick = now
 
             # TODO: Make this configurable
-            if 0 <= datetime.fromtimestamp(now).hour <= 8:
-            #if 14 <= datetime.fromtimestamp(now).hour <= 22:
+            if 14 <= datetime.fromtimestamp(now).hour <= 22:
                 self.osd.message("Go The @#$% To Sleep!", -1)
             else:
                 self.osd.hide()

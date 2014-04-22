@@ -84,6 +84,8 @@ default_timers = [
 ]
 
 import logging, os, signal, sys
+from importlib import import_module
+
 log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
@@ -110,18 +112,6 @@ from timeclock.util.single_instance import SingleInstance
 
 from timeclock.model import TimerModel  # pylint: disable=no-name-in-module
 
-from timeclock.controllers.idle import IdleController
-from timeclock.controllers.timer import TimerController
-from timeclock.controllers.bedtime_enforcer import BedtimeEnforcer
-
-from timeclock.notifications.audio import AudioNotifier
-from timeclock.notifications.osd_internal import OSDNaggerNotifier
-from timeclock.notifications.libnotify import LibNotifyNotifier
-
-# TODO: Find a better way to allow generalizing the UI init code
-import timeclock.ui.legacy
-import timeclock.ui.compact
-
 SELF_DIR = os.path.dirname(os.path.realpath(__file__))
 DATA_DIR = os.environ.get('XDG_DATA_HOME',
         os.path.expanduser('~/.local/share'))
@@ -134,16 +124,21 @@ if not os.path.isdir(DATA_DIR):
         raise SystemExit("Aborting: %s exists but is not a directory!"
                          % DATA_DIR)
 
-
 KNOWN_NOTIFY_MAP = {
-        'audio': AudioNotifier,
-        'libnotify': LibNotifyNotifier,
-        'osd': OSDNaggerNotifier
+        'audio': 'AudioNotifier',
+        'libnotify': 'LibNotifyNotifier',
+        'osd': 'OSDNaggerNotifier'
+}
+
+KNOWN_CONTROLLER_MAP = {
+    'timer': 'TimerController',
+    'idle': 'IdleController',
+    'bedtime_enforcer': 'BedtimeEnforcer',
 }
 
 # pylint: disable=no-member
-KNOWN_UI_MAP = {x: getattr(timeclock.ui, x).MainWin
-                for x in ['compact', 'legacy']}
+KNOWN_UI_LIST = ['compact', 'legacy']
+
 
 def main():
     """Main entry point for the application"""
@@ -154,7 +149,7 @@ def main():
                       help="start in MODE. (Use 'help' for a list)")
     parser.add_option('--ui',
                       action="append", dest="interfaces", default=[],
-                      type='choice', choices=KNOWN_UI_MAP.keys(),
+                      type='choice', choices=KNOWN_UI_LIST,
                       metavar="NAME",
                       help="Launch the specified UI instead of the default. "
                       "May be specified multiple times for multiple UIs.")
@@ -197,35 +192,48 @@ def main():
             (opts.mode, default.name))
         opts.mode = default
 
+    # TODO: Finish refactoring and deduplicating this loading harness
+    def load_module(model, package, name, clsname):
+        if not clsname:  # TODO: Instead of catching None here, do it properly.
+            log.warn("Failed to resolve module name %s", name)
+            return None
+
+        try:
+            # TODO: Use https://pypi.python.org/pypi/importlib/ to support
+            # Python 2.6 and earlier.
+            module = import_module('timeclock.%s.%s' % (package, name))
+        except ImportError, err:
+            log.warn("Could not initialize %s.%s due to unsatisfied "
+                     "dependencies:\n\t%s", package, name, err)
+            return None
+
+        cls = getattr(module, clsname, None)
+        if not cls:
+            log.warn("Could not find class %s.%s.%s", package, name, clsname)
+            return None
+
+        try:
+            cls(model)
+        except Exception, err:
+            log.warn("%s.%s failed to initialize:\n\t%s", package, name, err)
+        else:
+            log.info("Successfully instantiated %s.%s", package, name)
+
     # Controllers
-    # TODO: More general way to start these things
-    TimerController(model)
-    IdleController(model)
-    BedtimeEnforcer(model)
+    for name, clsname in KNOWN_CONTROLLER_MAP.items():
+        load_module(model, 'controllers', name, clsname)
 
     # Notification Views
     if not opts.notifiers:
         opts.notifiers = DEFAULT_NOTIFY_LIST
     for name in opts.notifiers:
-        try:
-            KNOWN_NOTIFY_MAP[name](model)
-        except ImportError:
-            log.warn("Could not initialize notifier %s due to unsatisfied "
-                     "dependencies.", name)
-        else:
-            log.info("Successfully instantiated notifier: %s", name)
+        load_module(model, 'notifications', name, KNOWN_NOTIFY_MAP.get(name))
 
     # UI Views
     if not opts.interfaces:
         opts.interfaces = DEFAULT_UI_LIST
     for name in opts.interfaces:
-        try:
-            KNOWN_UI_MAP[name](model)
-        except ImportError:
-            log.warn("Could not initialize UI %s due to unsatisfied "
-                     "dependencies.", name)
-        else:
-            log.info("Successfully instantiated UI: %s", name)
+        load_module(model, 'ui', name, 'MainWin')
 
     #TODO: Split out the PyNotify parts into a separate view(?) module.
     #TODO: Write up an audio notification view(?) module.

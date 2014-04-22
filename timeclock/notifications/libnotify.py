@@ -8,7 +8,11 @@ __authors__ = [
 __author__ = ', '.join(__authors__)
 __license__ = "GNU GPL 2.0 or later"
 
+from xml.sax.saxutils import escape as xmlescape
+
 import gobject, gtk
+import pynotify
+
 from ..ui.util import get_icon_path
 
 class LibNotifyNotifier(gobject.GObject):
@@ -20,9 +24,6 @@ class LibNotifyNotifier(gobject.GObject):
     error_dialog = None
 
     def __init__(self, model):
-        # ImportError should be caught when instantiating this.
-        import pynotify
-        from xml.sax.saxutils import escape as xmlescape
 
         # Do this second because I'm unfamiliar with GObject refcounting.
         super(LibNotifyNotifier, self).__init__()

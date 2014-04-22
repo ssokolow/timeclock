@@ -1,28 +1,29 @@
 """GStreamer-based audio notifier for timer expiry"""
 
-import os, sys
-import gobject
-
 __author__ = "Stephan Sokolow (deitarion/SSokolow)"
 __license__ = "GNU GPU 2.0 or later"
+
+import os, sys
+import gobject
 
 # TODO: Make this configurable
 NOTIFY_SOUND = os.path.join(
         os.path.dirname(os.path.realpath(__file__)),
         'sound.wav')
 
+try:
+    # Keep "import gst" from grabbing --help, showing its help, and exiting
+    _argv, sys.argv = sys.argv, []
+
+    import gst
+    import urllib
+finally:
+    # Restore sys.argv so I can parse it cleanly.
+    sys.argv = _argv
+
 class AudioNotifier(gobject.GObject):
     """An audio timer expiry notification based on a portability layer."""
     def __init__(self, model):
-        # Keep "import gst" from grabbing --help, showing its help, and exiting
-        _argv, sys.argv = sys.argv, []
-
-        try:
-            import gst
-            import urllib
-        finally:
-            # Restore sys.argv so I can parse it cleanly.
-            sys.argv = _argv
 
         self.gst = gst
         super(AudioNotifier, self).__init__()

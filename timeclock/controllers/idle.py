@@ -6,7 +6,11 @@ __author__ = "Stephan Sokolow (deitarion/SSokolow)"
 __license__ = "GNU GPU 2.0 or later"
 
 import time
+
 import gobject
+
+import xcb, xcb.xproto
+import xcb.screensaver
 
 # TODO: Make this configurable
 SLEEP_RESET_INTERVAL = 3600 * 6  # 6 hours
@@ -23,23 +27,17 @@ class IdleController(gobject.GObject):
         self.model = model
         self.last_tick = 0
 
-        try:
-            import xcb, xcb.xproto
-            import xcb.screensaver
-        except ImportError:
-            pass
-        else:
-            self.conn = xcb.connect()
-            self.setup = self.conn.get_setup()
-            self.ss_conn = self.conn(xcb.screensaver.key)
+        self.conn = xcb.connect()
+        self.setup = self.conn.get_setup()
+        self.ss_conn = self.conn(xcb.screensaver.key)
 
-            #TODO: Also handle gobject.IO_HUP in case of disconnect.
-            self.watch_id = gobject.io_add_watch(
-                    self.conn.get_file_descriptor(),
-                    gobject.IO_IN | gobject.IO_PRI,
-                    self.cb_xcb_response)
+        #TODO: Also handle gobject.IO_HUP in case of disconnect.
+        self.watch_id = gobject.io_add_watch(
+                self.conn.get_file_descriptor(),
+                gobject.IO_IN | gobject.IO_PRI,
+                self.cb_xcb_response)
 
-            model.connect('updated', self.cb_updated)
+        model.connect('updated', self.cb_updated)
 
     def __del__(self):
         if self.watch_id:

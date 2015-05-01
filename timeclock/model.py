@@ -10,7 +10,7 @@ __license__ = "GNU GPU 2.0 or later"
 import copy, logging, os, time
 import cPickle as pickle
 
-#FIXME: The core shouldn't depend on a specific toolkit for signalling
+# FIXME: The core shouldn't depend on a specific toolkit for signalling
 import gobject
 
 log = logging.getLogger(__name__)
@@ -38,9 +38,10 @@ def signalled_property(propname, signal_name):
 
     return property(pget, pset, pdel)
 
-class Mode(gobject.GObject):
+class Mode(gobject.GObject):  # pylint: disable=E1101
     """Data and operations for a timer mode"""
     __gsignals__ = {
+        # pylint: disable=E1101
         'notify-tick': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, ()),
         'updated': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, ())
     }
@@ -51,6 +52,7 @@ class Mode(gobject.GObject):
     overflow = signalled_property('_overflow', 'updated')
     show = True
 
+    # pylint: disable=E1002
     def __init__(self, name, total, used=0, overflow=None):
         super(Mode, self).__init__()
 
@@ -81,16 +83,16 @@ class Mode(gobject.GObject):
     def save(self):
         """Serialize into a dict that can be used with __init__."""
         return {
-                'class': self.__class__.__name__,
-                'name': self.name,
-                'total': self.total,
-                'used': self.used,
-                'overflow': self.overflow,
+            'class': self.__class__.__name__,
+            'name': self.name,
+            'total': self.total,
+            'used': self.used,
+            'overflow': self.overflow,
         }
 
     def cb_notify_tick(self):
         """Callback used to trigger periodic 'timer expired' notifications."""
-        self.emit('notify-tick')
+        self.emit('notify-tick')  # pylint: disable=E1101
 
 class UnlimitedMode(Mode):
     """Data and operations for modes like Asleep"""
@@ -104,9 +106,10 @@ class UnlimitedMode(Mode):
 
 SAFE_MODE_CLASSES = [Mode, UnlimitedMode]
 CURRENT_SAVE_VERSION = 6  #: Used for save file versioning
-class TimerModel(gobject.GObject):
+class TimerModel(gobject.GObject):  # pylint: disable=E1101
     """Model class which still needs more refactoring."""
     __gsignals__ = {
+        # pylint: disable=E1101
         'mode-changed': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (Mode,)),
         'notify_tick': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (Mode,)),
         'updated': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, ())
@@ -114,6 +117,7 @@ class TimerModel(gobject.GObject):
 
     _selected = None
 
+    # pylint: disable=E1002
     def __init__(self, save_file, defaults=None, start_mode=None):
         super(TimerModel, self).__init__()
 
@@ -127,7 +131,7 @@ class TimerModel(gobject.GObject):
         self._load()
         # IMPORTANT: _load() MUST be called before signals are bound.
 
-        #TODO: Still need to add "Asleep as an explicit mode" migration.
+        # TODO: Still need to add "Asleep as an explicit mode" migration.
         if not self.selected:
             self.start_mode = (self.get_mode_by_name(start_mode) or
                                self.timers[0])
@@ -148,11 +152,11 @@ class TimerModel(gobject.GObject):
     # pylint: disable=unused-argument
     def cb_updated(self, mode):
         """Callback used to propagate mode update events upward."""
-        self.emit('updated')
+        self.emit('updated')  # pylint: disable=E1101
 
     def cb_notify_tick(self, mode):
         """Callback used to propagate notification triggers upwards."""
-        self.emit('notify-tick', mode)
+        self.emit('notify-tick', mode)  # pylint: disable=E1101
 
     def reset(self):
         """Reset all timers to starting values"""
@@ -170,10 +174,13 @@ class TimerModel(gobject.GObject):
                 with open(self.save_file, 'rb') as fobj:
                     loaded = pickle.load(fobj)
 
-                #TODO: Move all the migration code to a different module.
-                #TODO: Use old versions of Timeclock to generate unit test data
+                # TODO: Move all the migration code to a different module.
+                # TODO: Redesign this based on schema migration design patterns
+                #       for maintainability.
+                # TODO: Use old Timeclock versions to generate unit test data
 
                 version = loaded[0]
+
                 win_state = {}
                 selected_mode = None  # Fallback value
                 if version == CURRENT_SAVE_VERSION:
@@ -206,8 +213,9 @@ class TimerModel(gobject.GObject):
                                 for key, value in used_old.items())
                     notify = True
                 else:
-                    raise ValueError("Save file too new! (Expected %s, got %s)"
-                            % (CURRENT_SAVE_VERSION, version))
+                    raise ValueError(
+                        "Save file too new! (Expected %s, got %s)" %
+                        (CURRENT_SAVE_VERSION, version))
 
                 if version <= 4:
                     # Out-of-band data from the save files
@@ -223,15 +231,15 @@ class TimerModel(gobject.GObject):
 
                 # Sanity checking could go here.
 
-            except Exception, err:
+            except Exception, err:  # pylint: disable=broad-except
                 log.error("Unable to load save file. Ignoring: %s", err)
                 timers = copy.deepcopy(self.default_timers)
             else:
                 log.info("Save file loaded successfully")
                 # File loaded successfully, now we put the data in place.
                 self.notify = notify
-                #self.app.saved_state = win_state
-                #FIXME: Replace this with some kind of 'loaded' signal.
+                # self.app.saved_state = win_state
+                # FIXME: Replace this with some kind of 'loaded' signal.
 
         else:
             timers = copy.deepcopy(self.default_timers)
@@ -251,9 +259,9 @@ class TimerModel(gobject.GObject):
             selected_mode = self.get_mode_by_name(selected_mode)
             if selected_mode:
                 self.selected = selected_mode
-        #TODO: I need a way to trigger a rebuild of the view's signal bindings.
+        # TODO: I need a way to trigger a rebuild of the view's signal bindings
 
-    #TODO: Reimplement using signalled_property and a signal connect.
+    # TODO: Reimplement using signalled_property and a signal connect.
     def _get_selected(self):
         """Getter backend for the C{selected} property"""
         return self._selected
@@ -262,22 +270,23 @@ class TimerModel(gobject.GObject):
         """Setter backend for the C{selected} property"""
         self._selected = mode
         self.active = mode
-        #TODO: Figure out what class should bear responsibility for
+        # TODO: Figure out what class should bear responsibility for
         # automatically changing self.active when self.mode is changed.
         self.save()
-        self.emit('mode-changed', mode)
-    selected = property(_get_selected, _set_selected)
+        self.emit('mode-changed', mode)  # pylint: disable=E1101
+
+    selected = property(_get_selected, _set_selected)  # pylint: disable=W1001
 
     def save(self):
         """Exit/Timeout handler for the app. Gets called every five minutes and
         on every type of clean exit except xkill. (PyGTK doesn't let you)
 
         Saves the current timer values to disk."""
-        #TODO: Re-imeplement this properly.
-        #window_state = {
-        #         'position': self.app.win.get_position(),
-        #        'decorated': self.app.win.get_decorated()
-        #}
+        # TODO: Re-imeplement this properly.
+        # window_state = {
+        #          'position': self.app.win.get_position(),
+        #         'decorated': self.app.win.get_decorated()
+        # }
         window_state = {}
         timers = [mode.save() for mode in self.timers]
 

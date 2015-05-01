@@ -91,6 +91,7 @@ class OSDWindow(RoundedWindow):
         self.timeout_id = None
         self._add_widgets()
         self.monitor_geom = monitor or None
+        self.set_type_hint(gtk.gdk.WINDOW_TYPE_HINT_SPLASHSCREEN)
 
         if self.monitor_geom:
             self.connect_after("size-allocate", self.__cb_size_allocate)

@@ -13,7 +13,7 @@ from ..ui.util import MultiMonitorOSD
 
 BEDTIME = 0
 
-class BedtimeEnforcer(gobject.GObject):
+class BedtimeEnforcer(gobject.GObject):  # pylint: disable=R0903,E1101
     """Very early draft to enforce a sleep cycle.
 
     @todo: Use a multi-process model so that quitting Timeclock doesn't
@@ -24,12 +24,13 @@ class BedtimeEnforcer(gobject.GObject):
            time when it starts nagging in order to learn the correct
            tunings to produce the desired sleep cycle.
     """
-    def __init__(self, model):
+    def __init__(self, model):  # pylint: disable=E1002
         super(BedtimeEnforcer, self).__init__()
         self.model = model
         self.last_tick = 0
         self.osd = MultiMonitorOSD(cycle=True,
-            font=pango.FontDescription("Sans Serif 64"))
+                                   # pylint: disable=E1101
+                                   font=pango.FontDescription("Sans Serif 64"))
         model.connect('updated', self.cb_updated)
 
     def cb_updated(self, model):

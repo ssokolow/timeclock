@@ -112,6 +112,8 @@ class TimerModel(gobject.GObject):
         'updated': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, ())
     }
 
+    _selected = None
+
     def __init__(self, save_file, defaults=None, start_mode=None):
         super(TimerModel, self).__init__()
 
@@ -126,14 +128,22 @@ class TimerModel(gobject.GObject):
         # IMPORTANT: _load() MUST be called before signals are bound.
 
         #TODO: Still need to add "Asleep as an explicit mode" migration.
-        self.start_mode = ([x for x in self.timers if x.name == start_mode] or
-                [self.timers[0]])[0]
-        self._selected = self.start_mode
-        self.active = self.start_mode
+        if not self.selected:
+            self.start_mode = (self.get_mode_by_name(start_mode) or
+                               self.timers[0])
+            self._selected = self.start_mode
+        self.active = self._selected
 
         for mode in self.timers:
             mode.connect('updated', self.cb_updated)
             mode.connect('notify-tick', self.cb_notify_tick)
+        self.selected = self.selected
+        # FIXME: Why doesn't this cause the button to depress?
+
+    def get_mode_by_name(self, name):
+        found = [x for x in self.timers if x.name == name]
+        if found:
+            return found[0]
 
     # pylint: disable=unused-argument
     def cb_updated(self, mode):
@@ -164,11 +174,14 @@ class TimerModel(gobject.GObject):
                 #TODO: Use old versions of Timeclock to generate unit test data
 
                 version = loaded[0]
+                win_state = {}
+                selected_mode = None  # Fallback value
                 if version == CURRENT_SAVE_VERSION:
                     version, data = loaded
                     timers = data.get('timers', [])
                     notify = data.get('window', {}).get('enable', True)
                     win_state = data.get('window', {})
+                    selected_mode = data.get('selected_mode', None)
                 elif version == 5:
                     version, timers, notify, win_state = loaded
 
@@ -180,11 +193,9 @@ class TimerModel(gobject.GObject):
                     version, total, used, notify, win_state = loaded
                 elif version == 3:
                     version, total, used, notify = loaded
-                    #win_state = {}
                 elif version == 2:
                     version, total, used = loaded
                     notify = True
-                    #win_state = {}
                 elif version == 1:
                     version, total_old, used_old = loaded
                     translate = ["N/A", "btn_overheadMode", "btn_workMode",
@@ -194,7 +205,6 @@ class TimerModel(gobject.GObject):
                     used = dict((translate.index(key), value)
                                 for key, value in used_old.items())
                     notify = True
-                    #win_state = {}
                 else:
                     raise ValueError("Save file too new! (Expected %s, got %s)"
                             % (CURRENT_SAVE_VERSION, version))
@@ -237,6 +247,10 @@ class TimerModel(gobject.GObject):
             cls = globals()[classname]
             if cls in SAFE_MODE_CLASSES:
                 self.timers.append(cls(**data))
+        if selected_mode:
+            selected_mode = self.get_mode_by_name(selected_mode)
+            if selected_mode:
+                self.selected = selected_mode
         #TODO: I need a way to trigger a rebuild of the view's signal bindings.
 
     #TODO: Reimplement using signalled_property and a signal connect.
@@ -271,6 +285,7 @@ class TimerModel(gobject.GObject):
             'timers': timers,
             'notify': {'enable': self.notify},
             'window': window_state,
+            'selected_mode': self.selected.name,
         }
 
         with open(self.save_file + '.tmp', "wb") as fobj:

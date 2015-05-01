@@ -268,12 +268,18 @@ class TimerModel(gobject.GObject):  # pylint: disable=E1101
 
     def _set_selected(self, mode):
         """Setter backend for the C{selected} property"""
-        self._selected = mode
-        self.active = mode
+        target = mode
+        if isinstance(mode, basestring):
+            target = self.get_mode_by_name(mode)
+        if not target:
+            log.error("Attempted to set unknown mode: %s", mode)
+
+        self._selected = target
+        self.active = self._selected
         # TODO: Figure out what class should bear responsibility for
         # automatically changing self.active when self.mode is changed.
         self.save()
-        self.emit('mode-changed', mode)  # pylint: disable=E1101
+        self.emit('mode-changed', self._selected)  # pylint: disable=E1101
 
     selected = property(_get_selected, _set_selected)  # pylint: disable=W1001
 

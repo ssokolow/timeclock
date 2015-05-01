@@ -28,6 +28,8 @@ class BedtimeEnforcer(gobject.GObject):  # pylint: disable=R0903,E1101
         super(BedtimeEnforcer, self).__init__()
         self.model = model
         self.last_tick = 0
+        self.bedtime = BEDTIME  # TODO: Make this configurable
+        self.alert_time = self.bedtime
         self.osd = MultiMonitorOSD(cycle=True,
                                    # pylint: disable=E1101
                                    font=pango.FontDescription("Sans Serif 64"))
@@ -42,15 +44,17 @@ class BedtimeEnforcer(gobject.GObject):  # pylint: disable=R0903,E1101
         if self.last_tick + 60 < now:
             self.last_tick = now
 
-            # TODO: Make this configurable
+            # TODO: Make waketime configurable
             hour = datetime.fromtimestamp(now).hour
-            waketime = (BEDTIME + 6) % 24
+            waketime = (self.alert_time + 6) % 24
 
             # TODO: Is there a more elegant way to do this?
             alerting = False
-            if waketime > BEDTIME and BEDTIME <= hour < waketime:
+            if waketime > self.alert_time and (
+                    self.alert_time <= hour < waketime):
                 alerting = True
-            elif waketime < BEDTIME and (BEDTIME <= hour or hour < waketime):
+            elif waketime < self.alert_time and (
+                    self.alert_time <= hour or hour < waketime):
                 alerting = True
 
             if alerting:

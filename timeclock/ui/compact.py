@@ -10,7 +10,8 @@ import gtk
 from .common import ModeWidgetMixin, MainWinMixin
 from .util import get_icon_path, RoundedWindow
 
-class ModeButton(gtk.RadioButton, ModeWidgetMixin):
+# pylint: disable=too-many-ancestors,too-many-public-methods
+class ModeButton(gtk.RadioButton, ModeWidgetMixin):  # pylint: disable=E1101
     """Compact progress-button representing a timer mode."""
 
     progress_label = lambda _, mode: str(mode)
@@ -20,15 +21,18 @@ class ModeButton(gtk.RadioButton, ModeWidgetMixin):
 
         self.mode = mode
         self.button = self  # XXX: Is there any potential harm in this?
-        self.progress = gtk.ProgressBar()
+        self.progress = gtk.ProgressBar()  # pylint: disable=E1101
 
         self._init_children()
 
-        self.add(self.progress)
+        self.add(self.progress)  # pylint: disable=E1101
 
 class MainWin(RoundedWindow, MainWinMixin):
     """Compact UI suitable for overlaying on titlebars"""
     def __init__(self, model):
+        # Silence PyLint's spurious "module 'gtk' has no member ..." warnings
+        # pylint: disable=E1101
+
         super(MainWin, self).__init__()
         self.set_resizable(False)
 
@@ -68,11 +72,11 @@ class MainWin(RoundedWindow, MainWinMixin):
         self.evbox.add(self.box)
         self.add(self.evbox)
         self.set_decorated(False)
-        #TODO: See if I can achieve something suitable using a window type too.
+        # TODO: See if I can achieve something suitable using a window type too
 
         self.evbox.connect('button-release-event', self.cb_show_menu)
         # TODO: Make this work so the Menu key works.
-        #self.evbox.connect('popup-menu', self.cb_show_menu)
+        # self.evbox.connect('popup-menu', self.cb_show_menu)
         handle_evbox.connect('button-press-event', self.cb_handle_pressed)
 
         self._init_after()
@@ -97,9 +101,12 @@ class MainWin(RoundedWindow, MainWinMixin):
         # we only want dragging via LMB (eg. preserve context menu)
         if event.button != 1:
             return False
+
+        # Silence PyLint's spurious "module 'gtk' has no member ..." warnings
+        # pylint: disable=E1101
         self.begin_move_drag(event.button,
-                int(event.x_root), int(event.y_root),
-                event.time)
+                             int(event.x_root), int(event.y_root),
+                             event.time)
 
     def cb_show_menu(self, widget, event=None, data=None):
         """Callback to trigger the context menu on right-click only"""
@@ -111,16 +118,20 @@ class MainWin(RoundedWindow, MainWinMixin):
         else:
             evtBtn, evtTime = None, None
 
+        # Silence PyLint's spurious "module 'gtk' has no member ..." warnings
+        # pylint: disable=E1101
         self.menu.popup(None, None, None, 3, evtTime)
 
         return True
 
-class MainWinContextMenu(gtk.Menu):
+class MainWinContextMenu(gtk.Menu):  # pylint: disable=E1101,R0903
     """Context menu for `MainWinCompact`"""
-    def __init__(self, mainwin, *args, **kwargs):
+    def __init__(self, mainwin, *args, **kwargs):  # pylint: disable=E1002
         super(MainWinContextMenu, self).__init__(*args, **kwargs)
         self.model = mainwin.model
 
+        # Silence PyLint's spurious "module 'gtk' has no member ..." warnings
+        # pylint: disable=E1101
         asleep = gtk.RadioMenuItem(None, "_Asleep")
         reset = gtk.MenuItem("_Reset...")
         sep = gtk.SeparatorMenuItem()
@@ -133,7 +144,7 @@ class MainWinContextMenu(gtk.Menu):
         self.append(prefs)
         self.append(quit_item)
 
-        #TODO: asleep
+        # TODO: asleep
         reset.connect('activate', mainwin.cb_reset, mainwin.model)
-        #TODO: prefs
+        # TODO: prefs
         quit_item.connect('activate', gtk.main_quit)

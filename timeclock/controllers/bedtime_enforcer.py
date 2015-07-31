@@ -4,14 +4,32 @@ from __future__ import absolute_import
 __author__ = "Stephan Sokolow (deitarion/SSokolow)"
 __license__ = "GNU GPU 2.0 or later"
 
-import time
-from datetime import datetime
+import logging
+from datetime import datetime, time, timedelta
+
+from dateutil.rrule import rrule, DAILY
 
 import gobject, pango
 
 from ..ui.util import MultiMonitorOSD
 
-BEDTIME = 0
+
+if True:
+    # Test code
+    now = datetime.utcnow()
+    BEDTIME = time(hour=now.hour, minute=now.minute, second=now.second)
+    SLEEP_DURATION = timedelta(seconds=10)  # Minimum allowed
+    SNOOZE_DURATION = timedelta(seconds=5)
+    UPD_INTERVAL = timedelta(seconds=1)
+else:
+    # TODO: Make these configurable
+    # NOTE: Times are in UTC (EST = UTC-5, EDT = UTC-4)
+    BEDTIME = time(hour=7)
+    SLEEP_DURATION = timedelta(hours=8)  # Minimum allowed
+    SNOOZE_DURATION = timedelta(minutes=20)
+    UPD_INTERVAL = timedelta(minutes=1)
+
+log = logging.getLogger(__name__)
 
 class BedtimeEnforcer(gobject.GObject):  # pylint: disable=R0903,E1101
     """Very early draft to enforce a sleep cycle.
@@ -24,40 +42,49 @@ class BedtimeEnforcer(gobject.GObject):  # pylint: disable=R0903,E1101
            time when it starts nagging in order to learn the correct
            tunings to produce the desired sleep cycle.
     """
+    epoch = datetime.utcfromtimestamp(0)
+    upd_interval = UPD_INTERVAL
+
     def __init__(self, model):  # pylint: disable=E1002
         super(BedtimeEnforcer, self).__init__()
         self.model = model
-        self.last_tick = 0
-        self.bedtime = BEDTIME  # TODO: Make this configurable
-        self.alert_time = self.bedtime
+        self.last_tick = self.epoch
+        self.bedtime = rrule(DAILY,
+                             byhour=BEDTIME.hour,
+                             byminute=BEDTIME.minute,
+                             bysecond=BEDTIME.second,
+                             dtstart=self.epoch)
+        self.alert_start = self.epoch
+        self.alert_end = self.epoch
+        self._upd_alert_time(datetime.utcnow(), force=True)
+
         self.osd = MultiMonitorOSD(cycle=True,
                                    # pylint: disable=E1101
                                    font=pango.FontDescription("Sans Serif 64"))
         model.connect('updated', self.cb_updated)
+    def _update_alerting(self, now):
+        if self.alert_start < now < self.alert_end:
+            log.debug("%s < %s < %s", self.alert_start, now, self.alert_end)
+            self.osd.message("Go The @#$% To Sleep!", -1)
+
+        else:
+            log.debug("Not %s < %s < %s",
+                      self.alert_start, now, self.alert_end)
+            self.osd.hide()
+
+    def _upd_alert_time(self, now, force=False):
+        self.alert_end = self.alert_start + SLEEP_DURATION
+        if self.alert_start < now and self.alert_end < now:
+            self.alert_start = self.bedtime.before(now)
+            self.alert_end = self.alert_start + SLEEP_DURATION
 
     def cb_updated(self, model):
         """Callback to check the time duration once per minute."""
-        now = time.time()
+        now = datetime.utcnow()
 
         # TODO: Deduplicate this logic without tripping over the GObject
         #       event loop bug.
-        if self.last_tick + 60 < now:
+        if self.last_tick + self.upd_interval < now:
             self.last_tick = now
-
-            # TODO: Make waketime configurable
-            hour = datetime.fromtimestamp(now).hour
-            waketime = (self.alert_time + 6) % 24
-
-            # TODO: Is there a more elegant way to do this?
-            alerting = False
-            if waketime > self.alert_time and (
-                    self.alert_time <= hour < waketime):
-                alerting = True
-            elif waketime < self.alert_time and (
-                    self.alert_time <= hour or hour < waketime):
-                alerting = True
-
-            if alerting:
-                self.osd.message("Go The @#$% To Sleep!", -1)
-            else:
-                self.osd.hide()
+            self._upd_alert_time(now)
+            self._update_alerting(now)

@@ -4,10 +4,11 @@ from __future__ import absolute_import
 __author__ = "Stephan Sokolow (deitarion/SSokolow)"
 __license__ = "GNU GPU 2.0 or later"
 
-import logging
+import logging, random, string
 from datetime import datetime, time, timedelta
 
 from dateutil.rrule import rrule, DAILY
+from setproctitle import setproctitle, getproctitle  # pylint: disable=E0611
 
 import gobject, pango
 
@@ -31,6 +32,16 @@ else:
 
 log = logging.getLogger(__name__)
 
+def get_random_proctitle():
+    """Return a 16-character alphanumeric string
+
+    Sources:
+        - http://stackoverflow.com/a/2257449/435253
+        - http://stackoverflow.com/a/23534499/435253
+    """
+    return ''.join(random.SystemRandom().choice(
+        string.ascii_letters + string.digits) for _ in range(16))
+
 class BedtimeEnforcer(gobject.GObject):  # pylint: disable=R0903,E1101
     """Very early draft to enforce a sleep cycle.
 
@@ -48,6 +59,7 @@ class BedtimeEnforcer(gobject.GObject):  # pylint: disable=R0903,E1101
     def __init__(self, model):  # pylint: disable=E1002
         super(BedtimeEnforcer, self).__init__()
         self.model = model
+        self.orig_proctitle = getproctitle()
         self.last_tick = self.epoch
         self.bedtime = rrule(DAILY,
                              byhour=BEDTIME.hour,
@@ -85,6 +97,7 @@ class BedtimeEnforcer(gobject.GObject):  # pylint: disable=R0903,E1101
 
             # TODO: Centralize this edge-event generation
             if old_suppress != self.model.suppress_shutdown:
+                setproctitle(get_random_proctitle())
                 self.model.emit("action-set-enabled",
                                 "Snooze", not self.has_snoozed)
         else:
@@ -94,6 +107,7 @@ class BedtimeEnforcer(gobject.GObject):  # pylint: disable=R0903,E1101
             if not self.has_snoozed:
                 self.model.suppress_shutdown = False
                 if old_suppress != self.model.suppress_shutdown:
+                    setproctitle(self.orig_proctitle)
                     self.model.emit("action-set-enabled", "Snooze", False)
 
     def _upd_alert_time(self, now, force=False):

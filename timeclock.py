@@ -87,7 +87,6 @@ import logging, os, signal, sys
 from importlib import import_module
 
 log = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
 #from gi import pygtkcompat
 #pygtkcompat.enable()
@@ -164,8 +163,20 @@ def main():
                       help="Use separate data store and single instance lock"
                       "so a development copy can be launched without "
                       "interfering with normal use")
+    parser.add_option('-v', '--verbose', action="count", dest="verbose",
+        default=3, help="Increase the verbosity.")
+    parser.add_option('-q', '--quiet', action="count", dest="quiet",
+        default=0, help="Decrease the verbosity. Use thrice for extra effect")
 
     opts, _ = parser.parse_args()
+
+    # Set up clean logging to stderr
+    log_levels = [logging.CRITICAL, logging.ERROR, logging.WARNING,
+                  logging.INFO, logging.DEBUG]
+    opts.verbose = min(opts.verbose - opts.quiet, len(log_levels) - 1)
+    opts.verbose = max(opts.verbose, 0)
+    logging.basicConfig(level=log_levels[opts.verbose],
+                        format='%(levelname)s: %(message)s')
 
     if opts.develop:
         lockname = __file__ + '.dev'

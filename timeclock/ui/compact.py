@@ -5,10 +5,14 @@ from __future__ import absolute_import
 __author__ = "Stephan Sokolow (deitarion/SSokolow)"
 __license__ = "GNU GPU 2.0 or later"
 
+import logging
+
 import gtk
 
 from .common import ModeWidgetMixin, MainWinMixin
 from .util import get_icon_path, RoundedWindow
+
+log = logging.getLogger(__name__)
 
 # pylint: disable=too-many-ancestors,too-many-public-methods
 class ModeButton(gtk.RadioButton, ModeWidgetMixin):  # pylint: disable=E1101
@@ -129,6 +133,7 @@ class MainWinContextMenu(gtk.Menu):  # pylint: disable=E1101,R0903
     def __init__(self, mainwin, *args, **kwargs):  # pylint: disable=E1002
         super(MainWinContextMenu, self).__init__(*args, **kwargs)
         self.model = mainwin.model
+        self.actions = {}
 
         # Silence PyLint's spurious "module 'gtk' has no member ..." warnings
         # pylint: disable=E1101
@@ -147,6 +152,7 @@ class MainWinContextMenu(gtk.Menu):  # pylint: disable=E1101,R0903
         self.model.connect('updated',
                            self.cb_model_updated)
         self.model.connect('action-added', self.cb_action_added)
+        self.model.connect('action-set-enabled', self.cb_action_set_enabled)
         for label, callback in self.model.actions:
             self.cb_action_added(label, callback)
 
@@ -159,6 +165,14 @@ class MainWinContextMenu(gtk.Menu):  # pylint: disable=E1101,R0903
         self.quit_item.set_sensitive(not model.suppress_shutdown)
         # TODO: Do more than this
 
+    def cb_action_set_enabled(self, _, action, is_enabled):
+        log.debug("Action toggled: %s -> %s", action, is_enabled)
+        widget = self.actions.get(action)
+        if widget:
+            widget.set_sensitive(is_enabled)
+        else:
+            log.warning("Unrecognized action (Compact UI): %s", action)
+
     def cb_action_added(self, label, callback):
         # pylint: disable=E1101
         menuitem = gtk.MenuItem(label)
@@ -166,3 +180,4 @@ class MainWinContextMenu(gtk.Menu):  # pylint: disable=E1101,R0903
 
         # FIXME: Insert, not append. (How do I get the desired position?)
         self.append(menuitem)
+        self.actions[label] = menuitem

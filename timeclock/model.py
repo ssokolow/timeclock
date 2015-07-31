@@ -112,6 +112,8 @@ class TimerModel(gobject.GObject):  # pylint: disable=E1101
         # pylint: disable=E1101
         'action-added': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
                          (str, gobject.TYPE_PYOBJECT)),
+        'action-set-enabled': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
+                               (str, bool,)),
         'mode-changed': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (Mode,)),
         'notify_tick': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (Mode,)),
         'updated': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, ())

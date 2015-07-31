@@ -62,19 +62,44 @@ class BedtimeEnforcer(gobject.GObject):  # pylint: disable=R0903,E1101
                                    # pylint: disable=E1101
                                    font=pango.FontDescription("Sans Serif 64"))
         model.connect('updated', self.cb_updated)
+
+        self.has_snoozed = False
+        model.add_action("Snooze", self.cb_snooze)
+        # TODO: Make Snooze only active while alerting
+
+    def cb_snooze(self, _):
+        now = datetime.utcnow()
+        self.alert_start = now + SNOOZE_DURATION
+        self._upd_alert_time(now)
+        self.model.emit("action-set-enabled", "Snooze", False)
+        self.has_snoozed = True
+
+        self._update_alerting(now)
+
     def _update_alerting(self, now):
+        old_suppress = self.model.suppress_shutdown
         if self.alert_start < now < self.alert_end:
             log.debug("%s < %s < %s", self.alert_start, now, self.alert_end)
+            self.model.suppress_shutdown = True
             self.osd.message("Go The @#$% To Sleep!", -1)
 
+            # TODO: Centralize this edge-event generation
+            if old_suppress != self.model.suppress_shutdown:
+                self.model.emit("action-set-enabled",
+                                "Snooze", not self.has_snoozed)
         else:
             log.debug("Not %s < %s < %s",
                       self.alert_start, now, self.alert_end)
             self.osd.hide()
+            if not self.has_snoozed:
+                self.model.suppress_shutdown = False
+                if old_suppress != self.model.suppress_shutdown:
+                    self.model.emit("action-set-enabled", "Snooze", False)
 
     def _upd_alert_time(self, now, force=False):
         self.alert_end = self.alert_start + SLEEP_DURATION
         if self.alert_start < now and self.alert_end < now:
+            self.has_snoozed = False
             self.alert_start = self.bedtime.before(now)
             self.alert_end = self.alert_start + SLEEP_DURATION
 

@@ -129,6 +129,12 @@ class TimerModel(gobject.GObject):  # pylint: disable=E1101
         self.start_mode = start_mode
         self.timers = []
         self.actions = []
+        # XXX: I don't want to persist this in case of bugs but I should really
+        #      make sure that there's no time-gap between the GUI appearing and
+        #      this getting set properly.
+        self.suppress_shutdown = signalled_property('_suppress_shutdown',
+            'updated')
+        self._suppress_shutdown = False
 
         self.notify = True
         self._load()

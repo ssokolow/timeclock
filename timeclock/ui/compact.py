@@ -136,13 +136,16 @@ class MainWinContextMenu(gtk.Menu):  # pylint: disable=E1101,R0903
         reset = gtk.MenuItem("_Reset...")
         sep = gtk.SeparatorMenuItem()
         prefs = gtk.MenuItem("_Preferences...")
-        quit_item = gtk.ImageMenuItem(stock_id="gtk-quit")
+        self.quit_item = gtk.ImageMenuItem(stock_id="gtk-quit")
 
         self.append(asleep)
         self.append(reset)
         self.append(sep)
         self.append(prefs)
-        self.append(quit_item)
+        self.append(self.quit_item)
+
+        self.model.connect('updated',
+                           self.cb_model_updated)
         self.model.connect('action-added', self.cb_action_added)
         for label, callback in self.model.actions:
             self.cb_action_added(label, callback)
@@ -150,7 +153,12 @@ class MainWinContextMenu(gtk.Menu):  # pylint: disable=E1101,R0903
         # TODO: asleep
         reset.connect('activate', mainwin.cb_reset, mainwin.model)
         # TODO: prefs
-        quit_item.connect('activate', gtk.main_quit)
+        self.quit_item.connect('activate', gtk.main_quit)
+
+    def cb_model_updated(self, model):
+        self.quit_item.set_sensitive(not model.suppress_shutdown)
+        # TODO: Do more than this
+
     def cb_action_added(self, label, callback):
         # pylint: disable=E1101
         menuitem = gtk.MenuItem(label)

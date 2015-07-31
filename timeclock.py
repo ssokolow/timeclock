@@ -253,11 +253,15 @@ def main():
     # Save state on exit
     sys.exitfunc = model.save
 
+    def sighandler(signum, stack_frame):
+        if not model.suppress_shutdown:
+            sys.exit(0)
+
     # Make sure signals call sys.exitfunc.
     for signame in ("SIGTERM", "SIGINT", "SIGHUP", "SIGQUIT"):
         sigconst = getattr(signal, signame, None)
         if sigconst:
-            signal.signal(sigconst, lambda signum, stack_frame: sys.exit(0))
+            signal.signal(sigconst, sighandler)
 
     # Make sure sys.exitfunc gets called on Ctrl+C
     try:

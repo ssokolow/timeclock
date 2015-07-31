@@ -110,6 +110,8 @@ class TimerModel(gobject.GObject):  # pylint: disable=E1101
     """Model class which still needs more refactoring."""
     __gsignals__ = {
         # pylint: disable=E1101
+        'action-added': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
+                         (str, gobject.TYPE_PYOBJECT)),
         'mode-changed': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (Mode,)),
         'notify_tick': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (Mode,)),
         'updated': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, ())
@@ -126,6 +128,7 @@ class TimerModel(gobject.GObject):  # pylint: disable=E1101
         self.default_timers = defaults or {}
         self.start_mode = start_mode
         self.timers = []
+        self.actions = []
 
         self.notify = True
         self._load()
@@ -143,6 +146,10 @@ class TimerModel(gobject.GObject):  # pylint: disable=E1101
             mode.connect('notify-tick', self.cb_notify_tick)
         self.selected = self.selected
         # FIXME: Why doesn't this cause the button to depress?
+
+    def add_action(self, label, callback):
+        self.emit('action-added', label, callback)  # pylint: disable=E1101
+        self.actions.append((label, callback))
 
     def get_mode_by_name(self, name):
         found = [x for x in self.timers if x.name == name]

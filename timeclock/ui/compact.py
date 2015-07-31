@@ -143,8 +143,18 @@ class MainWinContextMenu(gtk.Menu):  # pylint: disable=E1101,R0903
         self.append(sep)
         self.append(prefs)
         self.append(quit_item)
+        self.model.connect('action-added', self.cb_action_added)
+        for label, callback in self.model.actions:
+            self.cb_action_added(label, callback)
 
         # TODO: asleep
         reset.connect('activate', mainwin.cb_reset, mainwin.model)
         # TODO: prefs
         quit_item.connect('activate', gtk.main_quit)
+    def cb_action_added(self, label, callback):
+        # pylint: disable=E1101
+        menuitem = gtk.MenuItem(label)
+        menuitem.connect('activate', callback)
+
+        # FIXME: Insert, not append. (How do I get the desired position?)
+        self.append(menuitem)

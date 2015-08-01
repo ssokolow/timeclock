@@ -69,7 +69,10 @@ class BedtimeEnforcer(gobject.GObject):  # pylint: disable=R0903,E1101
                              dtstart=self.epoch)
         self.alert_start = self.epoch
         self.alert_end = self.epoch
-        self._upd_alert_time(datetime.utcnow(), force=True)
+
+        now = datetime.utcnow()
+        self._upd_alert_time(now, force=True)
+        self._update_alerting(now)
 
         self.osd = MultiMonitorOSD(cycle=True, pad_to=MIN_NOTIFICATION_SIZE,
                                    # pylint: disable=E1101

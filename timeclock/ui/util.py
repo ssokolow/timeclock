@@ -83,7 +83,7 @@ class OSDWindow(RoundedWindow):
     font = pango.FontDescription("Sans Serif 22")
 
     def __init__(self, corner_radius=25, monitor=None, font=None,
-                 *args, **kwargs):
+                 pad_to=None, *args, **kwargs):
         super(OSDWindow, self).__init__(type=gtk.WINDOW_POPUP,
                 corner_radius=corner_radius, *args, **kwargs)
 
@@ -92,6 +92,7 @@ class OSDWindow(RoundedWindow):
         self._add_widgets()
         self.monitor_geom = monitor or None
         self.set_type_hint(gtk.gdk.WINDOW_TYPE_HINT_SPLASHSCREEN)
+        self.pad_to = pad_to
 
         if self.monitor_geom:
             self.connect_after("size-allocate", self.__cb_size_allocate)
@@ -110,6 +111,7 @@ class OSDWindow(RoundedWindow):
     def _set_message(self, msg):
         """Override when overriding _add_widgets"""
         self.label.set_text(msg)
+        self.resize(*self.pad_to)
 
     def __cb_size_allocate(self, widget, allocation):
         """Callback to re-center the window as its contents change"""
@@ -160,12 +162,13 @@ class MultiMonitorOSD(gobject.GObject):
     cycle_id = None
     timeout_target = 0
 
-    def __init__(self, font=None, cycle=False):
+    def __init__(self, font=None, cycle=False, pad_to=None):
         super(MultiMonitorOSD, self).__init__()
 
         self.font = font or OSDWindow.font
         self.windows = {}
         self.cycle = cycle
+        self.pad_to = pad_to
 
         display_manager = gtk.gdk.display_manager_get()
         for display in display_manager.list_displays():
@@ -210,7 +213,7 @@ class MultiMonitorOSD(gobject.GObject):
 
     def cb_monitors_changed(self, screen):
         """Handler to adapt to changing desktop geometry"""
-        #FIXME: This must handle changes and deletes in addition to adds.
+        #XXX: Do we need to handle resizes here or will cb_display_closed do?
         for monitor_num in range(0, screen.get_n_monitors()):
             display_name = screen.get_display().get_name()
             screen_num = screen.get_number()
@@ -218,7 +221,8 @@ class MultiMonitorOSD(gobject.GObject):
 
             key = (display_name, screen_num, tuple(geom))
             if key not in self.windows:
-                window = OSDWindow(font=self.font, monitor=geom)
+                window = OSDWindow(font=self.font, monitor=geom,
+                                   pad_to=self.pad_to)
                 window.set_screen(screen)
                 self.windows[key] = window
 

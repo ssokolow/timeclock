@@ -14,6 +14,7 @@ import gobject, pango
 
 from ..ui.util import MultiMonitorOSD
 
+MIN_NOTIFICATION_SIZE = (750, 550)
 
 if True:
     # Test code
@@ -70,7 +71,7 @@ class BedtimeEnforcer(gobject.GObject):  # pylint: disable=R0903,E1101
         self.alert_end = self.epoch
         self._upd_alert_time(datetime.utcnow(), force=True)
 
-        self.osd = MultiMonitorOSD(cycle=True,
+        self.osd = MultiMonitorOSD(cycle=True, pad_to=MIN_NOTIFICATION_SIZE,
                                    # pylint: disable=E1101
                                    font=pango.FontDescription("Sans Serif 64"))
         model.connect('updated', self.cb_updated)

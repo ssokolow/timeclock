@@ -4,7 +4,7 @@ from __future__ import absolute_import
 __author__ = "Stephan Sokolow (deitarion/SSokolow)"
 __license__ = "GNU GPU 2.0 or later"
 
-import logging, random, string
+import logging, random, string  # pylint: disable=deprecated-module
 from datetime import datetime, time, timedelta
 
 from dateutil.rrule import rrule, DAILY
@@ -67,7 +67,7 @@ class BedtimeEnforcer(gobject.GObject):  # pylint: disable=R0903,E1101
         self.alert_end = self.epoch
 
         now = datetime.utcnow()
-        self._upd_alert_time(now, force=True)
+        self._upd_alert_time(now)
         self._update_alerting(now)
 
         self.osd = MultiMonitorOSD(cycle=True, pad_to=MIN_NOTIFICATION_SIZE,
@@ -110,7 +110,7 @@ class BedtimeEnforcer(gobject.GObject):  # pylint: disable=R0903,E1101
                     setproctitle(self.orig_proctitle)
                     self.model.emit("action-set-enabled", "Snooze", False)
 
-    def _upd_alert_time(self, now, force=False):
+    def _upd_alert_time(self, now):
         self.alert_end = self.alert_start + self.config['sleep_duration']
         if self.alert_start < now and self.alert_end < now:
             self.has_snoozed = False

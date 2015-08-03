@@ -114,7 +114,7 @@ from timeclock.model import TimerModel  # pylint: disable=no-name-in-module
 
 SELF_DIR = os.path.dirname(os.path.realpath(__file__))
 DATA_DIR = os.environ.get('XDG_DATA_HOME',
-        os.path.expanduser('~/.local/share'))
+                          os.path.expanduser('~/.local/share'))
 SAVE_FILE = os.path.join(DATA_DIR, "timeclock.sav")
 
 if not os.path.isdir(DATA_DIR):
@@ -125,9 +125,9 @@ if not os.path.isdir(DATA_DIR):
                          % DATA_DIR)
 
 KNOWN_NOTIFY_MAP = {
-        'audio': 'AudioNotifier',
-        'libnotify': 'LibNotifyNotifier',
-        'osd': 'OSDNaggerNotifier'
+    'audio': 'AudioNotifier',
+    'libnotify': 'LibNotifyNotifier',
+    'osd': 'OSDNaggerNotifier'
 }
 
 KNOWN_CONTROLLER_MAP = {
@@ -168,9 +168,10 @@ def main():
                       action="store_true", dest="test_mode", default=False,
                       help="Configure Bedtime Enforcer for testing")
     parser.add_option('-v', '--verbose', action="count", dest="verbose",
-        default=3, help="Increase the verbosity.")
+                      default=3, help="Increase the verbosity.")
     parser.add_option('-q', '--quiet', action="count", dest="quiet",
-        default=0, help="Decrease the verbosity. Use thrice for extra effect")
+                      default=0, help="Decrease the verbosity. "
+                      "Use thrice for extra effect")
 
     opts, _ = parser.parse_args()
 
@@ -214,7 +215,7 @@ def main():
     elif (opts.mode not in [x.name for x in model.timers]):
         default = model.timers[0]
         print ("Mode '%s' not recognized, defaulting to %s." %
-            (opts.mode, default.name))
+               (opts.mode, default.name))
         opts.mode = default
 
     # TODO: Finish refactoring and deduplicating this loading harness
@@ -260,14 +261,14 @@ def main():
     for name in opts.interfaces:
         load_module(model, 'ui', name, 'MainWin')
 
-    #TODO: Split out the PyNotify parts into a separate view(?) module.
-    #TODO: Write up an audio notification view(?) module.
-    #TODO: Try adding a "set urgent hint" call on the same interval as these.
+    # TODO: Split out the PyNotify parts into a separate view(?) module.
+    # TODO: Write up an audio notification view(?) module.
+    # TODO: Try adding a "set urgent hint" call on the same interval as these.
 
     # Save state on exit
     sys.exitfunc = model.save
 
-    def sighandler(signum, stack_frame):
+    def sighandler(signum, stack_frame):  # pylint: disable=unused-argument
         if not model.suppress_shutdown:
             sys.exit(0)
 

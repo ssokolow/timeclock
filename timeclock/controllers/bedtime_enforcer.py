@@ -68,11 +68,11 @@ class BedtimeEnforcer(gobject.GObject):  # pylint: disable=R0903,E1101
 
         now = datetime.utcnow()
         self._upd_alert_time(now)
-        self._update_alerting(now)
 
         self.osd = MultiMonitorOSD(cycle=True, pad_to=MIN_NOTIFICATION_SIZE,
                                    # pylint: disable=E1101
                                    font=pango.FontDescription("Sans Serif 64"))
+        self._update_alerting(now)
         model.connect('updated', self.cb_updated)
 
         self.has_snoozed = False

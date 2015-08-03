@@ -16,20 +16,14 @@ from ..ui.util import MultiMonitorOSD
 
 MIN_NOTIFICATION_SIZE = (750, 550)
 
-if True:
-    # Test code
-    now = datetime.utcnow()
-    BEDTIME = time(hour=now.hour, minute=now.minute, second=now.second)
-    SLEEP_DURATION = timedelta(seconds=10)  # Minimum allowed
-    SNOOZE_DURATION = timedelta(seconds=5)
-    UPD_INTERVAL = timedelta(seconds=1)
-else:
-    # TODO: Make these configurable
-    # NOTE: Times are in UTC (EST = UTC-5, EDT = UTC-4)
-    BEDTIME = time(hour=7)
-    SLEEP_DURATION = timedelta(hours=8)  # Minimum allowed
-    SNOOZE_DURATION = timedelta(minutes=20)
-    UPD_INTERVAL = timedelta(minutes=1)
+# NOTE: Times are in UTC (EST = UTC-5, EDT = UTC-4)
+DEFAULTS = {
+    # TODO: Make these persistent, configurable settings
+    'bedtime': time(hour=8),
+    'sleep_duration': timedelta(hours=7),  # Minimum allowed
+    'snooze_duration': timedelta(minutes=20),
+    'update_interval': timedelta(minutes=1)
+}
 
 log = logging.getLogger(__name__)
 
@@ -55,17 +49,19 @@ class BedtimeEnforcer(gobject.GObject):  # pylint: disable=R0903,E1101
            tunings to produce the desired sleep cycle.
     """
     epoch = datetime.utcfromtimestamp(0)
-    upd_interval = UPD_INTERVAL
 
     def __init__(self, model):  # pylint: disable=E1002
         super(BedtimeEnforcer, self).__init__()
+        self.config = DEFAULTS.copy()
+        self.config.update(getattr(model, 'bedtime_enforcer', {}))
+
         self.model = model
         self.orig_proctitle = getproctitle()
         self.last_tick = self.epoch
         self.bedtime = rrule(DAILY,
-                             byhour=BEDTIME.hour,
-                             byminute=BEDTIME.minute,
-                             bysecond=BEDTIME.second,
+                             byhour=self.config['bedtime'].hour,
+                             byminute=self.config['bedtime'].minute,
+                             bysecond=self.config['bedtime'].second,
                              dtstart=self.epoch)
         self.alert_start = self.epoch
         self.alert_end = self.epoch
@@ -85,7 +81,7 @@ class BedtimeEnforcer(gobject.GObject):  # pylint: disable=R0903,E1101
 
     def cb_snooze(self, _):
         now = datetime.utcnow()
-        self.alert_start = now + SNOOZE_DURATION
+        self.alert_start = now + self.config['snooze_duration']
         self._upd_alert_time(now)
         self.model.emit("action-set-enabled", "Snooze", False)
         self.has_snoozed = True
@@ -115,11 +111,11 @@ class BedtimeEnforcer(gobject.GObject):  # pylint: disable=R0903,E1101
                     self.model.emit("action-set-enabled", "Snooze", False)
 
     def _upd_alert_time(self, now, force=False):
-        self.alert_end = self.alert_start + SLEEP_DURATION
+        self.alert_end = self.alert_start + self.config['sleep_duration']
         if self.alert_start < now and self.alert_end < now:
             self.has_snoozed = False
             self.alert_start = self.bedtime.before(now)
-            self.alert_end = self.alert_start + SLEEP_DURATION
+            self.alert_end = self.alert_start + self.config['sleep_duration']
 
     def cb_updated(self, model):
         """Callback to check the time duration once per minute."""
@@ -127,7 +123,7 @@ class BedtimeEnforcer(gobject.GObject):  # pylint: disable=R0903,E1101
 
         # TODO: Deduplicate this logic without tripping over the GObject
         #       event loop bug.
-        if self.last_tick + self.upd_interval < now:
+        if self.last_tick + self.config['update_interval'] < now:
             self.last_tick = now
             self._upd_alert_time(now)
             self._update_alerting(now)

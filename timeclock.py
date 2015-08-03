@@ -84,6 +84,7 @@ default_timers = [
 ]
 
 import logging, os, signal, sys
+from datetime import datetime, time, timedelta
 from importlib import import_module
 
 log = logging.getLogger(__name__)
@@ -163,6 +164,9 @@ def main():
                       help="Use separate data store and single instance lock"
                       "so a development copy can be launched without "
                       "interfering with normal use")
+    parser.add_option('--test',
+                      action="store_true", dest="test_mode", default=False,
+                      help="Configure Bedtime Enforcer for testing")
     parser.add_option('-v', '--verbose', action="count", dest="verbose",
         default=3, help="Increase the verbosity.")
     parser.add_option('-q', '--quiet', action="count", dest="quiet",
@@ -193,6 +197,16 @@ def main():
 
     # Model
     model = TimerModel(savefile, default_timers, opts.mode)
+
+    if opts.test_mode:
+        now = datetime.utcnow()
+        model.bedtime_enforcer = {
+            'bedtime': time(hour=now.hour, minute=now.minute,
+                            second=now.second),
+            'sleep_duration': timedelta(seconds=10),
+            'snooze_duration': timedelta(seconds=5),
+            'update_interval': timedelta(seconds=1)
+        }
 
     if opts.mode == 'help':
         print "Valid mode names are: %s" % ', '.join(model.timers)

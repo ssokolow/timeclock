@@ -4,7 +4,7 @@
 __author__ = "Stephan Sokolow (deitarion/SSokolow)"
 __license__ = "MIT"
 
-import os, random, string, subprocess, sys  # pylint: disable=deprecated-module
+import os, random, signal, string, subprocess, sys  # pylint: disable=W0402
 from setproctitle import setproctitle  # pylint: disable=E0611
 
 try:
@@ -28,6 +28,14 @@ def get_random_proctitle():
 if __name__ == '__main__':
     os.chdir(os.path.dirname(__file__))
 
+    # Ignore as many normally fatal signals as possible
+    for signame in ("SIGABRT", "SIGALRM", "SIGVTALRM", "SIGHUP", "SIGINT",
+                    "SIGPROF", "SIGQUIT", "SIGTERM", "SIGTSTP", "SIGTRAP",
+                    "SIGUSR1", "SIGUSR2"):
+        sigconst = getattr(signal, signame, None)
+        if sigconst:
+            signal.signal(sigconst, signal.SIG_IGN)
+
     while True:
         # Make us immune to killing via .bash_history/.zhistory
         setproctitle(get_random_proctitle())
@@ -36,4 +44,4 @@ if __name__ == '__main__':
         subprocess.call(["./timeclock.py"] + sys.argv[1:])
 
         # Make sure we'll die on logout or closing Xephyr when testing
-        gtk.main_iteration()
+        gtk.main_iteration()  # pylint: disable=no-member

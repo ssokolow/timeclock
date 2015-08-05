@@ -25,6 +25,13 @@ def get_random_proctitle():
     return ''.join(random.SystemRandom().choice(
         string.ascii_letters + string.digits) for _ in range(16))
 
+child_pid = None
+def cont_child(signum, frame):
+    """Callback for handling SIGCHLD"""
+    if child_pid:
+        print("Vetoing SIGSTOP on timeclock")
+        os.kill(child_pid, signal.SIGCONT)
+
 if __name__ == '__main__':
     os.chdir(os.path.dirname(__file__))
 
@@ -36,12 +43,17 @@ if __name__ == '__main__':
         if sigconst:
             signal.signal(sigconst, signal.SIG_IGN)
 
+    # Use SIGCHLD to catch and reverse SIGSTOP on timeclock
+    signal.signal(signal.SIGCHLD, cont_child)
+
     while True:
         # Make us immune to killing via .bash_history/.zhistory
         setproctitle(get_random_proctitle())
 
         # Actually launch timeclock
-        subprocess.call(["./timeclock.py"] + sys.argv[1:])
+        tcproc = subprocess.Popen(["./timeclock.py"] + sys.argv[1:])
+        child_pid = tcproc.pid
+        tcproc.wait()
 
         # Make sure we'll die on logout or closing Xephyr when testing
         gtk.main_iteration()  # pylint: disable=no-member

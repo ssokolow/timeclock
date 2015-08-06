@@ -26,11 +26,16 @@ def get_random_proctitle():
         string.ascii_letters + string.digits) for _ in range(16))
 
 child_pid = None
-def cont_child(signum, frame):
+def cont_child(signum, frame): # pylint: disable=unused-argument
     """Callback for handling SIGCHLD"""
     if child_pid:
-        print("Vetoing SIGSTOP on timeclock")
-        os.kill(child_pid, signal.SIGCONT)
+        try:
+            os.kill(child_pid, signal.SIGCONT)
+        except OSError:
+            pass  # We don't want to die if SIGCHLD was for process exit
+        else:
+            print("Vetoed possible SIGSTOP on timeclock")
+
 
 if __name__ == '__main__':
     os.chdir(os.path.dirname(__file__))

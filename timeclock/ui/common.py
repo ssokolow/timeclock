@@ -34,7 +34,7 @@ class ModeWidgetMixin(object):
         if self.progress:
             self.progress.set_text(self.progress_label(mode))
             self.progress.set_fraction(
-                    max(float(mode.remaining()) / mode.total, 0))
+                max(float(mode.remaining()) / mode.total, 0))
 
     # pylint: disable=no-self-use
     def progress_label(self, mode):
@@ -73,10 +73,11 @@ class MainWinMixin(object):
 
     def cb_reset(self, widget, model):
         """Handler for user requests to reset the timeclock countdowns"""
-        confirm = gtk.MessageDialog(type=gtk.MESSAGE_WARNING,
-                buttons=gtk.BUTTONS_OK_CANCEL,
-                message_format="Reset all timers?\n"
-                "Warning: This operation cannot be undone.")
+        confirm = gtk.MessageDialog(
+            type=gtk.MESSAGE_WARNING,
+            buttons=gtk.BUTTONS_OK_CANCEL,
+            message_format="Reset all timers?\n"
+            "Warning: This operation cannot be undone.")
 
         # Workaround for the dialog showing up beneath MainWin because of
         # _init_after's set_keep_above(True) call.

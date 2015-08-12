@@ -19,8 +19,8 @@ MIN_NOTIFICATION_SIZE = (750, 550)
 # NOTE: Times are in UTC (EST = UTC-5, EDT = UTC-4)
 DEFAULTS = {
     # TODO: Make these persistent, configurable settings
-    'bedtime': time(hour=8),
-    'sleep_duration': timedelta(hours=7),  # Minimum allowed
+    'bedtime': time(hour=4),
+    'sleep_duration': timedelta(hours=6),  # Minimum allowed
     'snooze_duration': timedelta(minutes=20),
     'update_interval': timedelta(minutes=1)
 }

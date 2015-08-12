@@ -82,6 +82,10 @@ class OSDWindow(RoundedWindow):
 
     font = pango.FontDescription("Sans Serif 22")
 
+    # To minimize bright, flashing lights at night
+    fgcolor = gtk.gdk.Color(50000, 50000, 50000)
+    bgcolor = gtk.gdk.Color(0, 0, 0)
+
     def __init__(self, corner_radius=25, monitor=None, font=None,
                  pad_to=None, *args, **kwargs):
         super(OSDWindow, self).__init__(type=gtk.WINDOW_POPUP,
@@ -107,6 +111,9 @@ class OSDWindow(RoundedWindow):
         self.add(self.label)
 
         self.set_border_width(10)
+        for wid in (self, self.label):
+            wid.modify_bg(gtk.STATE_NORMAL, self.bgcolor)
+            wid.modify_fg(gtk.STATE_NORMAL, self.fgcolor)
 
     def _set_message(self, msg):
         """Override when overriding _add_widgets"""

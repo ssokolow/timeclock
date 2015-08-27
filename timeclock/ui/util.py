@@ -118,7 +118,8 @@ class OSDWindow(RoundedWindow):
     def _set_message(self, msg):
         """Override when overriding _add_widgets"""
         self.label.set_text(msg)
-        self.resize(*self.pad_to)
+        if self.pad_to:
+            self.resize(*self.pad_to)
 
     def __cb_size_allocate(self, widget, allocation):
         """Callback to re-center the window as its contents change"""

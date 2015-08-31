@@ -61,4 +61,4 @@ if __name__ == '__main__':
         tcproc.wait()
 
         # Make sure we'll die on logout or closing Xephyr when testing
-        gtk.main_iteration()  # pylint: disable=no-member
+        gtk.main_iteration(block=False)  # pylint: disable=no-member

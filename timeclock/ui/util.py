@@ -130,6 +130,18 @@ class OSDWindow(RoundedWindow):
             while gtk.events_pending():
                 gtk.main_iteration_do(False)
 
+            # Make the OSD translucent to input so it's irritating rather than
+            # unfairly frustrating when it appears in the middle of playing
+            # a game
+            w, h = allocation.width, allocation.height
+            bitmap = gtk.gdk.Pixmap(widget.window, w, h, 1)
+            cr = bitmap.cairo_create()
+            cr.set_operator(cairo.OPERATOR_SOURCE)
+            cr.set_source_rgba(0.0, 0.0, 0.0, 0.0)
+            self.rounded_rectangle(cr, 0, 0, w, h, self.corner_radius)
+            cr.fill()
+            widget.window.input_shape_combine_mask(bitmap, 0, 0)
+
             widget.window.move(
                 geom.x + (geom.width / 2) - (allocation.width / 2),
                 geom.y + (geom.height / 2) - (allocation.height / 2))
